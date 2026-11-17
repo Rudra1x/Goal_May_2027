@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Route — operating console to May 2027</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ffffff;--surface:#f5f7fa;--surface-2:#eef1f6;--ink:#0f1b33;--ink-2:#5b6679;--ink-3:#8b94a7;--line:#e5e9f0;
+  --job:#3a5bff;--job-soft:#eaefff;--body:#178a5c;--body-soft:#e6f5ee;--money:#6e5ad6;--money-soft:#efecfb;--alert:#b9650a;--alert-soft:#fff3e2;--ok:#178a5c;
+  --radius:12px;--shadow:0 1px 2px rgba(15,27,51,.06),0 4px 16px rgba(15,27,51,.05);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0e1422;--surface:#141b2b;--surface-2:#1b2335;--ink:#e9edf5;--ink-2:#b2bbcb;--ink-3:#7f8aa0;--line:#26304a;
+  --job:#7b93ff;--job-soft:#1a2347;--body:#3fc78b;--body-soft:#12302a;--money:#ab9ef2;--money-soft:#241f3d;--alert:#f0a94a;--alert-soft:#3a2a12;--ok:#3fc78b;
+  --shadow:none;color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#0e1422;--surface:#141b2b;--surface-2:#1b2335;--ink:#e9edf5;--ink-2:#b2bbcb;--ink-3:#7f8aa0;--line:#26304a;
+  --job:#7b93ff;--job-soft:#1a2347;--body:#3fc78b;--body-soft:#12302a;--money:#ab9ef2;--money-soft:#241f3d;--alert:#f0a94a;--alert-soft:#3a2a12;--ok:#3fc78b;
+  --shadow:none;color-scheme:dark;}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;height:100%;background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+button,input,select,textarea{font:inherit;color:inherit;}
+button{cursor:pointer;}
+a{color:var(--job);}
+h1,h2,h3,h4{margin:0;letter-spacing:-0.01em;}
+h1{font-size:22px;font-weight:700;}
+h2{font-size:18px;font-weight:700;}
+h3{font-size:15px;font-weight:600;}
+p{margin:0;}
+.muted{color:var(--ink-2);} .faint{color:var(--ink-3);} .sm{font-size:14px;} .xs{font-size:12.5px;}
+:focus-visible{outline:2px solid var(--job);outline-offset:2px;border-radius:6px;}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100%;}
+.side{border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;height:100vh;height:100dvh;overflow:auto;background:var(--paper);}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:var(--ink);display:grid;place-items:center;}
+.brand .mark svg{width:16px;height:16px;stroke:var(--paper);}
+.brand b{font-size:15px;}
+.brand small{display:block;color:var(--ink-3);font-size:12px;}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:9px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14.5px;min-height:44px;}
+.nav a svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+.nav a:hover{background:var(--surface);}
+.nav a.on{background:var(--job-soft);color:var(--job);}
+.nav .sep{height:1px;background:var(--line);margin:10px 8px;}
+.main{min-width:0;padding:22px 26px 100px;max-width:1040px;}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.top p{margin-top:2px;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--surface-2);color:var(--ink-2);}
+.pill.job{background:var(--job-soft);color:var(--job);} .pill.body{background:var(--body-soft);color:var(--body);} .pill.money{background:var(--money-soft);color:var(--money);} .pill.alert{background:var(--alert-soft);color:var(--alert);}
+
+/* Bottom nav (mobile) */
+.bnav{display:none;}
+@media (max-width:820px){
+  .shell{grid-template-columns:1fr;}
+  .side{display:none;}
+  .main{padding:16px 16px 96px;}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));z-index:20;}
+  .bnav a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;text-decoration:none;color:var(--ink-3);font-size:11px;font-weight:500;min-height:44px;border-radius:8px;}
+  .bnav a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .bnav a.on{color:var(--job);}
+}
+
+/* Cards */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.card + .card{margin-top:12px;}
+.grid{display:grid;gap:12px;}
+.g2{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:repeat(3,1fr);} .g4{grid-template-columns:repeat(4,1fr);}
+@media (max-width:820px){.g2,.g3,.g4{grid-template-columns:1fr 1fr;}}
+@media (max-width:520px){.g2,.g3{grid-template-columns:1fr;} .g4{grid-template-columns:1fr 1fr;} .stat b{font-size:20px;}}
+.stat small{display:block;color:var(--ink-3);font-size:12.5px;}
+.stat b{font-size:22px;font-weight:700;letter-spacing:-0.02em;}
+.stat .sub{font-size:13px;color:var(--ink-2);margin-top:2px;}
+.card.job{border-top:3px solid var(--job);} .card.body{border-top:3px solid var(--body);} .card.money{border-top:3px solid var(--money);} .card.mind{border-top:3px solid var(--alert);}
+.section-title{display:flex;align-items:baseline;justify-content:space-between;margin:22px 0 10px;}
+.section-title h2{font-size:16px;}
+
+/* Checklist rows */
+.row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--line);}
+.row:first-of-type{border-top:0;padding-top:4px;}
+.row .chk{flex:none;width:24px;height:24px;margin-top:1px;border:2px solid var(--line);border-radius:7px;background:var(--paper);display:grid;place-items:center;}
+.row .chk svg{width:14px;height:14px;stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0;}
+.row.done .chk{background:var(--ok);border-color:var(--ok);} .row.done .chk svg{opacity:1;}
+.row.done .t{color:var(--ink-3);text-decoration:line-through;}
+.row .t{font-weight:500;} .row .d{font-size:13.5px;color:var(--ink-2);margin-top:2px;}
+.row .meta{font-size:12px;color:var(--ink-3);margin-top:3px;}
+.row button.tap{all:unset;cursor:pointer;display:flex;gap:12px;flex:1;align-items:flex-start;min-height:44px;}
+.row .tag{flex:none;align-self:center;}
+
+/* Buttons & forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--paper);font-weight:600;font-size:14.5px;}
+.btn:hover{background:var(--surface);} a.btn{text-decoration:none;}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);} .btn.primary:hover{opacity:.9;}
+.btn.job{background:var(--job);border-color:var(--job);color:#fff;} .btn.body{background:var(--body);border-color:var(--body);color:#fff;}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13.5px;}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:6px;}
+.in{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);}
+textarea.in{min-height:88px;resize:vertical;}
+.frow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+@media (max-width:560px){.frow{grid-template-columns:1fr 1fr;}}
+.help{font-size:12.5px;color:var(--ink-3);margin-top:4px;}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:10px;font-size:14px;font-weight:500;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:30;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media (min-width:821px){.toast{bottom:28px;}}
+
+/* Accordion */
+details.acc{border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);box-shadow:var(--shadow);}
+details.acc + details.acc{margin-top:10px;}
+details.acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;font-weight:600;min-height:52px;}
+details.acc summary::-webkit-details-marker{display:none;}
+details.acc summary .chev{width:18px;height:18px;stroke:var(--ink-3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s;flex:none;}
+details.acc[open] summary .chev{transform:rotate(180deg);}
+details.acc .body{padding:0 16px 16px;color:var(--ink);font-size:15px;}
+details.acc .body p{margin-top:8px;max-width:72ch;}
+details.acc .body ul,details.acc .body ol{margin:8px 0 0;padding-left:20px;max-width:72ch;} details.acc .body li{margin:5px 0;}
+.rule{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;background:var(--surface);}
+.rule .if{font-weight:600;} .rule .if::before{content:"If ";color:var(--alert);} .rule .then{margin-top:3px;} .rule .then::before{content:"then ";color:var(--alert);font-weight:600;}
+.rule .why{font-size:13px;color:var(--ink-2);margin-top:6px;}
+.script{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:14.5px;position:relative;}
+.script .lab{font-size:12px;color:var(--ink-3);margin-bottom:4px;font-weight:600;}
+.script .cp{position:absolute;top:8px;right:8px;}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{font-size:12px;color:var(--ink-3);font-weight:600;background:var(--surface);}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.search{display:flex;gap:8px;align-items:center;margin-bottom:12px;}
+.search .in{flex:1;}
+.empty{color:var(--ink-3);font-size:14px;padding:16px 0;text-align:center;}
+.kg{font-weight:700;color:var(--body);}
+.tl{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.tl .ph{background:var(--surface);padding:10px 14px;font-weight:700;font-size:13.5px;color:var(--job);border-top:1px solid var(--line);}
+.tl .ph:first-child{border-top:0;}
+.tl .row{padding:12px 14px;margin:0;border-top:1px solid var(--line);}
+.tl .row.hide{display:none;}
+.verdict{border-left:3px solid var(--alert);background:var(--alert-soft);padding:10px 14px;border-radius:0 10px 10px 0;margin-top:12px;font-size:14.5px;}
+.verdict.ok{border-color:var(--ok);background:var(--body-soft);}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.seg button{all:unset;cursor:pointer;padding:0 14px;min-height:40px;font-size:13.5px;font-weight:600;color:var(--ink-2);}
+.seg button.on{background:var(--ink);color:var(--paper);}
+.chart{width:100%;height:auto;display:block;margin-top:8px;}
+.sheet-bg{position:fixed;inset:0;background:rgba(15,27,51,.4);z-index:40;display:none;}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:41;display:none;}
+.sheet a{display:flex;align-items:center;gap:12px;padding:12px 8px;min-height:48px;text-decoration:none;color:var(--ink);font-weight:500;border-top:1px solid var(--line);}
+.sheet a:first-of-type{border-top:0;}
+.sheet a svg{width:20px;height:20px;stroke:var(--ink-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.sheet-bg.open,.sheet.open{display:block;}
+.view{display:none;} .view.on{display:block;}
+.kbd{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--surface-2);padding:1px 6px;border-radius:5px;}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18 L10 6 L14 14 L20 4"/></svg></div><div><b>Route</b><small>to May 2027</small></div></div>
+    <nav class="nav" id="sideNav"></nav>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<nav class="bnav" id="bnav"></nav>
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================ ICONS ============================ */
+const I = {
+  today:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  week:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16"/></svg>',
+  log:'<svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-7"/></svg>',
+  rules:'<svg viewBox="0 0 24 24"><path d="M12 3l9 4-9 4-9-4 9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/></svg>',
+  more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+  job:'<svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></svg>',
+  body:'<svg viewBox="0 0 24 24"><path d="M3 12h3l2-5 3 10 3-7 2 2h5"/></svg>',
+  money:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M3 10h2M19 14h2"/></svg>',
+  checks:'<svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"/></svg>',
+  sources:'<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5V5a2 2 0 0 1 2-2h14v14H6.5A2.5 2.5 0 0 0 4 19.5z"/></svg>',
+  res:'<svg viewBox="0 0 24 24"><path d="M2 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7z"/></svg>',
+  copy:'<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  chev:'<svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  setup:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+};
+
+/* ============================ STORE ============================ */
+const KEY='route-console-v1';
+const DEFAULTS={ setup:{slotWeekdayTime:'',slotWeekdayPlace:'',slotTueThuTime:'',slotWeekendDay:'Sat',slotWeekendTime:'',audio:'',noticePeriod:'',freeMeal:''},
+  daily:{}, weeks:{}, checkins:[], problems:{}, pitches:[], apps:[], lifts:[], checkpoints:{}, passes:{} };
+let S;
+function load(){ try{ const raw=localStorage.getItem(KEY); S=raw?Object.assign({},DEFAULTS,JSON.parse(raw)):JSON.parse(JSON.stringify(DEFAULTS)); }catch(e){ S=JSON.parse(JSON.stringify(DEFAULTS)); } for(const k in DEFAULTS){ if(S[k]===undefined) S[k]=JSON.parse(JSON.stringify(DEFAULTS[k])); } }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){ toast('Could not save (storage unavailable)'); } }
+
+/* ============================ DATES ============================ */
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const today=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
+const dayMs=86400000;
+const daysBetween=(a,b)=>Math.round((parse(b)-parse(a))/dayMs);
+function weekStart(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+const WK=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmt=s=>{const d=parse(s);return `${WK[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;};
+const fmtLong=d=>`${WK[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+
+const OFFER='2027-04-30', BUFFER='2027-05-15', LAND='2027-05-31', START='2026-11-17';
+const PHASES=[
+  {n:1,name:'Become legible',from:'2026-11-17',to:'2026-12-31',goal:'Résumé, two repos, 25 problems, 6 pitches, mini-rag done. Rules installed.'},
+  {n:2,name:'Loop readiness',from:'2027-01-01',to:'2027-01-31',goal:'4 designs spoken, 5 stories, 40 problems, calibration applications, screen rate known.'},
+  {n:3,name:'Volume',from:'2027-02-01',to:'2027-02-28',goal:'50+ applications, referral-first; 5+ first rounds; mediums at ~50%.'},
+  {n:4,name:'Convert',from:'2027-03-01',to:'2027-03-31',goal:'2+ final rounds. Sleep protected in interview weeks.'},
+  {n:5,name:'Close',from:'2027-04-01',to:'2027-04-30',goal:'Offer ≥ ₹12 LPA signed, in writing.'},
+  {n:6,name:'Transition',from:'2027-05-01',to:'2027-05-31',goal:'Serving notice or joined. 68 kg. Money sequence starts.'}
+];
+function phaseFor(d){ const s=iso(d); return PHASES.find(p=>s>=p.from&&s<=p.to)||(s<START?PHASES[0]:PHASES[5]); }
+const WEIGHT_TARGETS=[['2026-11-22',76.0],['2026-12-31',74.0],['2027-01-31',72.7],['2027-02-28',71.5],['2027-03-31',70.2],['2027-04-30',69.0],['2027-05-31',68.0]];
+function targetWeightOn(s){ const pts=WEIGHT_TARGETS; if(s<=pts[0][0]) return pts[0][1]; if(s>=pts[pts.length-1][0]) return pts[pts.length-1][1];
+  for(let i=0;i<pts.length-1;i++){ const [a,wa]=pts[i],[b,wb]=pts[i+1]; if(s>=a&&s<=b){ const t=daysBetween(a,s)/daysBetween(a,b); return +(wa+(wb-wa)*t).toFixed(1);} } return 68; }
+
+/* ============================ CONTENT ============================ */
+const SLOTS={
+  1:[{id:'bj',k:'job',t:'Build-and-judge floor',d:'20 min: one problem (this week’s category), then 25 min: one build slice. Log the problem.'},{id:'gym',k:'body',t:'Gym: Push',d:'Big lifts by double progression. Then 20-min incline walk with treadmill-only audio.'}],
+  2:[{id:'sp',k:'job',t:'Speak: 3-minute pitch or design',d:'Record on the phone. Listen back once with the checklist. Bad recording still counts.'},{id:'gym',k:'body',t:'Gym: Pull',d:'Log the top set of the row and pull-down.'}],
+  3:[{id:'bj',k:'job',t:'Build-and-judge floor',d:'Problem + build slice. Re-solve a problem from three sessions ago from a blank file.'},{id:'gym',k:'body',t:'Gym: Legs',d:'Squat or leg press top set logged.'}],
+  4:[{id:'sp',k:'job',t:'Speak: 3-minute pitch or design',d:'Second recording of the week. Two fundamentals said aloud as warm-up.'},{id:'gym',k:'body',t:'Gym: Push',d:'20-min incline walk after lifting.'}],
+  5:[{id:'bj',k:'job',t:'Judge rep (Friday)',d:'Generate a 40-line solution with an AI assistant, find three defects aloud, fix them. From week 5 also a mixed re-solve.'},{id:'gym',k:'body',t:'Gym: Pull',d:'—'}],
+  6:[{id:'we',k:'job',t:'Weekend block: 90 min, one sitting',d:'Nov–Jan: résumé, READMEs, LinkedIn, target list. Feb onward: 10–15 applications, referral-first.'},{id:'gym',k:'body',t:'Gym: Legs',d:'Last session of the week. Then the 20-min walk if you skipped one.'}],
+  0:[{id:'ck',k:'mind',t:'Sunday check-in',d:'Weigh in before breakfast. Log the four numbers in Log. Pick this week’s free meal.'},{id:'rest',k:'body',t:'Rest day',d:'No gym. Eggs still happen. Buy the week’s eggs, soya chunks, chana.'}]
+};
+const DAILY_ALL=[{id:'prot',k:'body',t:'Protein on every plate',d:'130 g minimum; 150 g on gym days. First protein before 14:00.'},{id:'carb',k:'body',t:'Carb rule',d:'Roti/rice at two meals only, half portion. No sugary drinks, no packaged snacks.'},{id:'sleep',k:'body',t:'In bed by 23:30',d:'Phone out of reach at 23:15. Seven hours is the floor.'}];
+
+const CURRICULUM=[
+  {w:'Weeks 1–2 · 17–30 Nov',cat:'Arrays',ps:['Two Sum','Best Time to Buy and Sell Stock','Contains Duplicate','Maximum Subarray','Product of Array Except Self'],exit:'Any of these cold in 15 min'},
+  {w:'Weeks 3–4 · 1–14 Dec',cat:'Hashmaps & counting',ps:['Valid Anagram','Group Anagrams','Top K Frequent Elements','First Unique Character','Two Sum with a dict'],exit:'Counter/defaultdict without looking up syntax'},
+  {w:'Weeks 5–6 · 15–28 Dec',cat:'Strings',ps:['Valid Palindrome','Valid Parentheses','Longest Common Prefix','Reverse Words','String Compression'],exit:'Fridays become mixed re-solve days'},
+  {w:'Weeks 7–8 · 29 Dec–11 Jan',cat:'Two pointers',ps:['Two Sum II','Remove Duplicates from Sorted Array','Move Zeroes','3Sum','Container With Most Water'],exit:'3Sum explained aloud with complexity'},
+  {w:'Weeks 9–11 · 12 Jan–1 Feb',cat:'Sliding window',ps:['Max Sum Subarray of Size K','Longest Substring Without Repeating Characters','Minimum Size Subarray Sum','Longest Repeating Character Replacement','Permutation in String'],exit:'Easy cold; 40 problems by 31 Jan'},
+  {w:'Weeks 12–19 · Feb–Mar',cat:'Mediums, interleaved',ps:['Subarray Sum Equals K','Longest Consecutive Sequence','Sort Colors','Trapping Rain Water (attempt)','Minimum Window Substring (attempt)'],exit:'Medium ~50% in 30 min by 28 Feb; 60 total by 31 Mar'}
+];
+const DESIGNS=[['4 Jan','RAG at scale (enterprise document assistant)','Chunk size vs recall · hybrid search · re-ranking cost · freshness · citations and abstention · per-query cost'],['11 Jan','LLM evaluation pipeline','Golden set · LLM-as-judge bias · regression gates in CI · online vs offline · sampling for human review'],['18 Jan','Tool-using agent with failure handling','Tool schemas · retry and timeout limits · idempotent actions · human-in-the-loop · log every call · cost ceiling'],['25 Jan','Fine-tuning and data pipeline (SovereignAI)','When FT beats prompting · data quality and dedup · LoRA vs full · eval before/after · rollback'],['1 Feb','Inference serving and cost control','Batching · prompt and semantic caching · streaming · model routing · p95 latency · cost per 1k'],['8 Feb','Guardrails and PII (support assistant)','Input/output filters · prompt-injection surface · PII redaction · audit log · what you refuse']];
+const FUNDAMENTALS=['Tokens, context window, why long context is not free','Temperature, top-p, when temperature is 0','Embeddings and cosine similarity; chunk size and recall','Chunking, overlap, metadata filters, hybrid (BM25 + dense)','Re-ranking: when it pays, what it costs','Hallucination: grounding, citations, abstention, faithfulness metric','Prompting vs RAG vs fine-tuning: the decision rule','LoRA/QLoRA; data quality; catastrophic forgetting','Evals: offline vs online; LLM-as-judge biases; golden sets','Agents: tool schemas, retry limits, idempotency, HITL points','Serving: batching, caching, streaming, p95, cost per 1k','Guardrails: PII, injection surface, output validation, rate limits'];
+const STORIES=[['Ambiguity','A fuzzy requirement you defined (EDMS two-day build, platform scope).'],['Failure','Something that broke, what you learned, what you changed — your fix.'],['Conflict','A disagreement resolved by data.'],['Ownership','Something nobody asked for that mattered.'],['Impact','The biggest number you moved.']];
+const SCRIPTS=[
+  {lab:'Referral ask',t:'Hi [name] — I’m applying for the [role] on your team at [company]. I built [one system, one number] and I think it maps closely to what the posting describes. Would you be comfortable referring me, or pointing me to the person hiring? Résumé attached, and happy to send a two-paragraph summary you can forward.'},
+  {lab:'Cold message to a hiring manager or engineer',t:'Hi [name] — I read [specific thing their team built or wrote]. I’ve shipped something adjacent: [system], which [number]. The [role] posting looks like a fit and I’d rather reach you than the portal. Two-minute walkthrough is here: [repo]. Open to a short call if useful.'},
+  {lab:'Current CTC',t:'My current CTC is ₹4.8 LPA, fixed. I joined as a fresher straight from my master’s, and the role has grown faster than the number — in the last year I’ve shipped [system] and [system]. I’m benchmarking against what this role pays rather than my current base.'},
+  {lab:'Expected CTC',t:'Based on the role and what the market pays for applied LLM engineers at my experience, I’m looking in the range of ₹13–16 LPA, with fixed being the part I care about. I’m flexible on structure if the fixed component is there.'},
+  {lab:'If they anchor on your current salary',t:'I understand the hike percentage looks large. The comparison I’d ask you to make is with the market band for this role, which your own posting sits in. If the base is fixed, I’m open to a joining bonus, an earlier review at six months, or a notice-period buyout.'},
+  {lab:'Deferring the number before technical rounds',t:'I’d like to understand the role first; I’m confident we’ll align on compensation if there’s a fit.'}
+];
+const PROTEIN=[['Whole eggs','4 eggs','~26 g','Boil a dozen on Sunday'],['Paneer','150 g','~28 g','~19 g per 100 g'],['Soya chunks (dry)','50 g (≈1 katori cooked)','~25 g','Cheapest protein per rupee; keep 500 g in the room'],['Dal','2 katori','~16 g','7–9 g per katori'],['Dahi / curd','200 g','~8 g','Greek-style doubles it'],['Milk','1 glass','~8 g','—'],['VegPro','1 full scoop','check label (~20–25 g)','Full scoop from 1 Dec if gas stays minor'],['Peanuts / roasted chana','30 g','~7 g','Only allowed snack']];
+const CHECKPOINTS=[
+  {ph:1,d:'2026-11-18',k:'job',t:'Set the slot times and places (Setup). Phase-1 WOOP. Tracker exists (this app).'},
+  {ph:1,d:'2026-11-18',k:'body',t:'Buy eggs, 500 g soya chunks, roasted chana. Choose treadmill-only audio.'},
+  {ph:1,d:'2026-11-22',k:'job',t:'Pitch #1 recorded (RAG benchmark). First problem logged.'},
+  {ph:1,d:'2026-11-22',k:'body',t:'Baseline weigh-in 76.0 logged. Protein anchor starts.'},
+  {ph:1,d:'2026-11-24',k:'job',t:'Notice period found and entered in Setup. mini-rag repo created.'},
+  {ph:1,d:'2026-11-24',k:'body',t:'20-min incline walk on Push days starts.'},
+  {ph:1,d:'2026-11-30',k:'job',t:'Résumé v1 (one page, no “Jr”, numbers on every bullet). Arrays exit test.'},
+  {ph:1,d:'2026-11-30',k:'body',t:'Carb rule fully in place. First free meal scheduled.'},
+  {ph:1,d:'2026-12-01',k:'job',t:'10 problems logged.'},
+  {ph:1,d:'2026-12-01',k:'body',t:'VegPro to a full scoop.'},
+  {ph:1,d:'2026-12-07',k:'job',t:'Repo 1 public with README + diagram. LinkedIn headline matches résumé. December passes written.'},
+  {ph:1,d:'2026-12-14',k:'job',t:'Repo 2 public. Résumé v2 after an outside review. Hashmaps exit test.'},
+  {ph:1,d:'2026-12-21',k:'job',t:'mini-rag runs end to end on 20 docs with a 10-question eval.'},
+  {ph:1,d:'2026-12-31',k:'job',t:'Checkpoint: résumé final, 2 repos, 25 problems, 6 pitches, mini-rag done.'},
+  {ph:1,d:'2026-12-31',k:'body',t:'Checkpoint: 74.0 kg. Big-lift top sets at or above November.'},
+  {ph:2,d:'2027-01-01',k:'job',t:'Phase-2 WOOP. January passes. tool-agent repo created.'},
+  {ph:2,d:'2027-01-04',k:'job',t:'Design 1 spoken: RAG at scale.'},
+  {ph:2,d:'2027-01-11',k:'job',t:'Design 2: eval pipeline. 15 calibration applications. Two-pointers exit test.'},
+  {ph:2,d:'2027-01-17',k:'job',t:'Five STAR stories written and recorded once each.'},
+  {ph:2,d:'2027-01-18',k:'job',t:'Design 3: tool-using agent.'},
+  {ph:2,d:'2027-01-24',k:'job',t:'40-company target list built, one contact per company where possible.'},
+  {ph:2,d:'2027-01-25',k:'job',t:'Design 4: fine-tuning pipeline.'},
+  {ph:2,d:'2027-01-31',k:'job',t:'Checkpoint: 40 problems, easy cold; 4 designs; 5 stories; screen rate known; tool-agent done.'},
+  {ph:2,d:'2027-01-31',k:'body',t:'Checkpoint: 72.7 kg.'},
+  {ph:3,d:'2027-02-01',k:'job',t:'Phase-3 WOOP. Design 5: serving and cost. Mediums start. 10–15 applications/week. eval-harness repo created.'},
+  {ph:3,d:'2027-02-08',k:'job',t:'Design 6: guardrails and PII. Half of applications via referral or direct message.'},
+  {ph:3,d:'2027-02-15',k:'job',t:'25 applications cumulative. Under 10% first-round rate → stop-and-fix rule.'},
+  {ph:3,d:'2027-02-28',k:'job',t:'Checkpoint: 50+ applications, 5+ first rounds, 50 problems, eval-harness done.'},
+  {ph:3,d:'2027-02-28',k:'body',t:'Checkpoint: 71.5 kg.'},
+  {ph:4,d:'2027-03-01',k:'job',t:'Phase-4 WOOP. Weekend slot = interviews. Build slices reproduce live loops.'},
+  {ph:4,d:'2027-03-15',k:'job',t:'Mid-month review: which stage are you losing at? Fix only that stage.'},
+  {ph:4,d:'2027-03-31',k:'job',t:'Checkpoint: 2+ final rounds; 60+ problems.'},
+  {ph:4,d:'2027-03-31',k:'body',t:'Checkpoint: 70.2 kg.'},
+  {ph:5,d:'2027-04-01',k:'job',t:'Phase-5 WOOP. Compensation scripts rehearsed aloud twice.'},
+  {ph:5,d:'2027-04-15',k:'job',t:'Decision point: no final round live → widen to GCCs, consultancies, remote; 15/week.'},
+  {ph:5,d:'2027-04-30',k:'job',t:'Checkpoint: offer ≥ ₹12 LPA signed, in writing. Resignation timed to notice period.'},
+  {ph:5,d:'2027-04-30',k:'body',t:'Checkpoint: 69.0 kg.'},
+  {ph:6,d:'2027-05-15',k:'job',t:'Buffer deadline for the offer. Money sequence starts the month the salary lands.'},
+  {ph:6,d:'2027-05-31',k:'job',t:'Serving notice or joined. Résumé updated.'},
+  {ph:6,d:'2027-05-31',k:'body',t:'68.0 kg, lifts at or above November. Maintenance rules.'}
+];
+const PROTOCOLS=[
+  {s:'Missed a slot once',p:'Nothing. It is inside habit-formation noise. Do not make it up.',tags:'miss skip habit'},
+  {s:'Missed the same slot twice in a row',p:'Next instance at half length (20 min) whatever the quality. Never miss three. Log a pass if one is left.',tags:'miss twice streak'},
+  {s:'Used a pass',p:'Tick it in Log before the day ends. Two per month for slots, two for diet. Unused passes expire.',tags:'pass allowance'},
+  {s:'It is Monday or the 1st',p:'Last week’s or month’s misses are closed. Open Today, not the backlog. That is the fresh-start reset.',tags:'monday reset fresh start'},
+  {s:'A number is zero two Sundays running',p:'The structure changes, by the rows below. You do not conclude anything about yourself.',tags:'zero stall'},
+  {s:'Holidays, 24 Dec – 2 Jan',p:'Tue/Thu recordings only, phone only. Protein anchor stays; carb rule suspended; no passes used. Full week resumes Mon 5 Jan.',tags:'holiday december christmas new year'},
+  {s:'Work crunch (demo, deadline)',p:'Tue/Thu only, 20 min each. Gym: three sessions minimum (Push, Pull, Legs). Diet unchanged. Full week the Monday after. A second crunch month triggers a slot-time review.',tags:'work busy crunch deadline demo'},
+  {s:'Problems solved = 0 for two weeks',p:'Move the slot to the morning before work for two weeks. Problem 15 min, build 20. Still zero → go back one category.',tags:'problems zero coding'},
+  {s:'Pitches recorded = 0 for two weeks',p:'Record on the phone during the incline walk — two minutes, no laptop, no listen-back. Volume first.',tags:'pitch recording zero speak'},
+  {s:'Applications = 0 for two weeks (Feb onward)',p:'The résumé is not finished or the target list does not exist. Next weekend slot on exactly one of those.',tags:'applications zero'},
+  {s:'Screen rate under 10% after 25 applications',p:'Stop applying for one week. One outside résumé review. Rebuild the list toward postings that name RAG/agents/evals. Resume.',tags:'screen rate rejection resume'},
+  {s:'Losing at the technical screen',p:'Fundamentals list becomes the Tue/Thu warm-up at four items a week. Record yourself answering them.',tags:'technical screen fundamentals losing'},
+  {s:'Losing at the practical / take-home',p:'Build half doubles to 45 min for two weeks; problem half pauses. Rebuild the artefact the loop asked for.',tags:'take-home practical build losing'},
+  {s:'Losing at system design',p:'Re-speak the six designs, one per day, six days. Then record and listen for the trade-offs you failed to name.',tags:'system design losing'},
+  {s:'Losing at the final / culture round',p:'Rehearse the five stories aloud twice each. Ask the recruiter for the reason.',tags:'final culture behavioural losing'},
+  {s:'Rejected after a final round',p:'Three lines in Log: what they asked, what I said, what I would say now. Then the next application the same day. Make the gap between rejection and next action small.',tags:'rejected rejection final'},
+  {s:'Scale flat two weeks',p:'Check sleep first (three nights under 6.5 h → fix sleep, no food change). Else remove one roti or half the rice from one carb meal.',tags:'weight flat plateau scale'},
+  {s:'Scale flat three weeks',p:'Walk to six days for two weeks. No further food change until tested.',tags:'weight plateau three weeks'},
+  {s:'Dropping more than 0.7 kg/week (after week 2)',p:'Add the carb back. Faster than 0.7% a week is where muscle starts going.',tags:'weight fast too fast'},
+  {s:'Lifts dropping two sessions',p:'Add protein that day, check sleep, do not cut carbs. Three sessions → one carb back for a week.',tags:'strength lifts dropping muscle'},
+  {s:'Three nights under 6.5 h in a week',p:'No diet changes this week. Lights-out rule enforced for seven days before anything else is touched.',tags:'sleep tired'},
+  {s:'Ill',p:'No slots, no gym, eat normally including carbs, sleep. Resume at 70% the first week back. No passes used.',tags:'sick ill fever'},
+  {s:'Travel (home, hackathon, conference)',p:'Tue/Thu recordings only, phone. Protein anchor stays; carb rule off. Skip the weigh-in; compare next Sunday to the pre-travel reading.',tags:'travel home trip hackathon'},
+  {s:'Interview lands on a gym day',p:'Gym moves, interview does not. The split continues from where it stopped.',tags:'interview gym clash'},
+  {s:'Offer below ₹12 LPA in April',p:'Do not accept on the call. Run the CTC scripts. Ask for the written offer anyway — it is leverage. Accept only if nothing else is live by 15 May and the role is a clear step up.',tags:'offer low negotiate salary'},
+  {s:'Ate badly today',p:'One meal is water weight, not failure. Next meal: protein first, no carbs. Do not skip the next meal to compensate.',tags:'ate cheat binge food'},
+  {s:'Missed gym',p:'Split continues from where it stopped; no skipping ahead. Two misses → next session at 70% volume.',tags:'gym missed'}
+];
+const SOURCES=[
+  ['Behaviour','Gollwitzer & Sheeran (2006), implementation intentions meta-analysis, 94 tests, d ≈ 0.65; Sheeran, Listrom & Gollwitzer (2024), 642 tests. · Lally et al. (2010), habit formation median 66 days, one miss immaterial; 2024 meta-analysis of 20 studies. · Milkman et al. (2014) temptation bundling ~55% more gym visits; Dai, Milkman & Riis, fresh-start effect; Sharif, what-the-hell effect. · Oettingen & Mayer (2002) positive fantasies; Wang et al. (2021) MCII meta-analysis. · Rowland (2014), Adesope et al. (2017) testing effect; Latimier et al. (2021) spacing; Brunmair & Richter (2019) interleaving.'],
+  ['Job market','2026 India AI-engineer salary compilations (commercial): masaischool.com quoting foundit Sept 2026 (0–3 yrs ₹8.87–15.41 LPA); recrew.ai; taggd.in (GenAI premium 20–40%); gradright.com; cloudthat.com. Loops: calibrd.com; techscreen.app; 3university.io; aitechconnect.in; alexeygrigorev/ai-engineering-field-guide. Referrals: Jobvite/Aptitude 2024 (30% vs 7%); ERIN 2025; fmcgroup.com; Gem. CTC: weekday.works; jobipo.com; talkdrill.com.'],
+  ['Body','Garthe et al. (2011) IJSNEM 21(2): 0.7%/wk vs 1.4%/wk. · Morton et al. (2018) BJSM: ~1.6 g/kg plateau. · Helms et al. (2014): 2.3–3.1 g/kg FFM in a deficit. · Refalo, Trexler & Helms (2025) Strength Cond. J. 47(3): up to ~1.9 g/kg BW. · Longland et al. (2016): 2.4 vs 1.2 g/kg. · Nedeltcheva et al. (2010) Ann. Intern. Med. 153(7): 5.5 h vs 8.5 h sleep, 55% less fat loss, 60% more FFM loss. · Protein values: clearcals.com, instacuppastore.com (IFCT 2017), organicmandya.com.'],
+  ['Money','3–6 months of essential expenses in liquid instruments before aggressive investing; save at least half of each raise; step-up SIP: sahi.com, retirewise.in, finnovate.in, business-standard.com, tatamutualfund.com. General guidance, not individual advice.']
+];
+
+/* ============================ ROUTER ============================ */
+const VIEWS=[['today','Today',I.today],['week','Week',I.week],['log','Log',I.log],['rules','Rules',I.rules],['checks','Checkpoints',I.checks],['job','Job manual',I.job],['body','Body manual',I.body],['money','Money',I.money],['resources','Resources',I.res],['setup','Setup',I.setup],['sources','Sources',I.sources]];
+const BOTTOM=['today','week','log','rules'];
+function route(){ let h=(location.hash||'#today').slice(1).replace(/[^a-z0-9-]/g,''); if(!VIEWS.some(v=>v[0]===h)) h='today'; render(h); }
+window.addEventListener('hashchange',route);
+
+function renderNav(cur){
+  document.getElementById('sideNav').innerHTML=VIEWS.map((v,i)=>(i===5?'<div class="sep"></div>':'')+`<a href="#${v[0]}" class="${cur===v[0]?'on':''}">${v[2]}${v[1]}</a>`).join('');
+  const b=document.getElementById('bnav');
+  b.innerHTML=BOTTOM.map(k=>{const v=VIEWS.find(x=>x[0]===k);return `<a href="#${k}" class="${cur===k?'on':''}">${v[2]}<span>${v[1]}</span></a>`;}).join('')+`<a href="#more" id="moreBtn" class="${BOTTOM.includes(cur)?'':'on'}">${I.more}<span>More</span></a>`;
+  document.getElementById('moreBtn').addEventListener('click',e=>{e.preventDefault();openSheet();});
+  document.getElementById('sheet').innerHTML=VIEWS.filter(v=>!BOTTOM.includes(v[0])).map(v=>`<a href="#${v[0]}">${v[2]}${v[1]}</a>`).join('');
+  document.getElementById('sheet').querySelectorAll('a').forEach(a=>a.addEventListener('click',closeSheet));
+}
+function openSheet(){document.getElementById('sheet').classList.add('open');document.getElementById('sheetBg').classList.add('open');}
+function closeSheet(){document.getElementById('sheet').classList.remove('open');document.getElementById('sheetBg').classList.remove('open');}
+document.getElementById('sheetBg').addEventListener('click',closeSheet);
+
+function render(v){
+  renderNav(v);
+  const m=document.getElementById('main');
+  const fn={today:vToday,week:vWeek,log:vLog,rules:vRules,checks:vChecks,job:vJob,body:vBody,money:vMoney,resources:vResources,setup:vSetup,sources:vSources}[v];
+  m.innerHTML=fn();
+  wire(m);
+  window.scrollTo({top:0});
+}
+let toastT; function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1600);}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============================ HELPERS ============================ */
+function weekKey(d){return iso(weekStart(d));}
+function wk(d){const k=weekKey(d); if(!S.weeks[k]) S.weeks[k]={problems:0,pitches:0,apps:0}; return S.weeks[k];}
+function dayRec(d){const k=iso(d); if(!S.daily[k]) S.daily[k]={}; return S.daily[k];}
+function monthKey(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;}
+function passes(d){const k=monthKey(d); if(!S.passes[k]) S.passes[k]={slot:0,diet:0}; return S.passes[k];}
+function lastCheckin(){return S.checkins.length?S.checkins[S.checkins.length-1]:null;}
+function problemsSolved(){return Object.values(S.problems).filter(p=>p.date).length;}
+function nextCheckpoints(n){const t=iso(today());return CHECKPOINTS.filter(c=>c.d>=t&&!S.checkpoints[c.d+'|'+c.t]).slice(0,n);}
+function overdueCheckpoints(){const t=iso(today());return CHECKPOINTS.filter(c=>c.d<t&&!S.checkpoints[c.d+'|'+c.t]);}
+function row(id,t,d,done,k,meta){return `<div class="row ${done?'done':''}" data-chk="${id}"><button class="tap" aria-pressed="${done}"><span class="chk">${I.check}</span><span><span class="t">${esc(t)}</span><span class="d" style="display:block">${esc(d||'')}</span>${meta?`<span class="meta" style="display:block">${esc(meta)}</span>`:''}</span></button>${k?`<span class="pill ${k} tag">${k==='mind'?'check-in':k}</span>`:''}</div>`;}
+function acc(t,body,open){return `<details class="acc" ${open?'open':''}><summary>${esc(t)}${I.chev}</summary><div class="body">${body}</div></details>`;}
+function rule(i,t,w){return `<div class="rule"><div class="if">${i}</div><div class="then">${t}</div>${w?`<div class="why">${w}</div>`:''}</div>`;}
+function script(s,idx){return `<div class="script"><div class="lab">${esc(s.lab)}</div><button class="btn sm cp" data-copy="${idx}" aria-label="Copy ${esc(s.lab)}">${I.copy}Copy</button>${esc(s.t)}</div>`;}
+
+/* ============================ VIEWS ============================ */
+function vToday(){
+  const d=today(), s=iso(d), ph=phaseFor(d), wd=d.getDay();
+  const dOffer=daysBetween(s,OFFER), dLand=daysBetween(s,LAND);
+  const rec=dayRec(d), w=wk(d), lc=lastCheckin();
+  const slots=(SLOTS[wd]||[]).concat(DAILY_ALL);
+  const setupMissing=!S.setup.slotWeekdayTime||!S.setup.slotTueThuTime;
+  const next=nextCheckpoints(3), over=overdueCheckpoints();
+  const wkTargets={problems:3,pitches:2,apps:ph.n>=3?10:0};
+  return `
+  <div class="top"><div><h1>${fmtLong(d)}</h1><p class="muted">Phase ${ph.n} · ${esc(ph.name)} · ${dOffer>=0?dOffer+' days to the offer deadline':'offer deadline passed'} · ${dLand>=0?dLand+' days to 68 kg':''}</p></div><span class="pill job">Week of ${fmt(weekKey(d))}</span></div>
+  ${setupMissing?`<div class="card mind" style="margin-bottom:12px"><b>Set the slot times first.</b> <span class="muted sm">Same time, same place, every week — the habit forms on the cue. Takes one minute.</span><div class="btnrow"><a class="btn primary" href="#setup">Open Setup</a></div></div>`:''}
+  ${over.length?`<div class="card mind" style="margin-bottom:12px"><b>${over.length} checkpoint${over.length>1?'s':''} past due.</b> <span class="muted sm">Tick them off or move on — a Monday closes them.</span><div class="btnrow"><a class="btn sm" href="#checks">Open checkpoints</a></div></div>`:''}
+  <div class="grid g4">
+    <div class="card stat"><small>Problems this week</small><b>${w.problems}<span class="faint" style="font-size:14px;font-weight:500"> / ${wkTargets.problems}</span></b><div class="sub">${problemsSolved()} total logged</div></div>
+    <div class="card stat"><small>Pitches this week</small><b>${w.pitches}<span class="faint" style="font-size:14px;font-weight:500"> / ${wkTargets.pitches}</span></b><div class="sub">${S.pitches.length} total</div></div>
+    <div class="card stat"><small>Applications this week</small><b>${w.apps}${wkTargets.apps?`<span class="faint" style="font-size:14px;font-weight:500"> / ${wkTargets.apps}</span>`:''}</b><div class="sub">${S.apps.length} total · ${ph.n<3?'starts 1 Feb':'referral-first'}</div></div>
+    <div class="card stat"><small>Scale</small><b>${lc?lc.weight.toFixed(1)+' kg':'—'}</b><div class="sub">target today ${targetWeightOn(s).toFixed(1)} kg${lc?' · '+(lc.weight-targetWeightOn(lc.date)>0.3?'<span style="color:var(--alert)">above line</span>':'<span style="color:var(--ok)">on line</span>'):''}</div></div>
+  </div>
+  <div class="btnrow"><button class="btn job" data-inc="problems">${I.plus}Problem solved</button><button class="btn job" data-inc="pitches">${I.plus}Pitch recorded</button><button class="btn" data-inc="apps">${I.plus}Application sent</button></div>
+  <div class="section-title"><h2>Today</h2><span class="xs faint">${slots.filter(x=>rec[x.id]).length}/${slots.length} done</span></div>
+  <div class="card">${slots.map(x=>row('d:'+x.id,x.t,x.d,!!rec[x.id],x.k)).join('')}</div>
+  <div class="section-title"><h2>Next deadlines</h2><a class="xs" href="#checks">All checkpoints</a></div>
+  <div class="card">${next.length?next.map(c=>row('c:'+c.d+'|'+c.t,c.t,'',false,c.k,fmt(c.d)+(daysBetween(s,c.d)===0?' · today':' · in '+daysBetween(s,c.d)+' days'))).join(''):'<div class="empty">Nothing pending.</div>'}</div>
+  <div class="section-title"><h2>Phase ${ph.n} goal</h2></div>
+  <div class="card"><p>${esc(ph.goal)}</p><p class="sm muted" style="margin-top:8px">${fmt(ph.from)} → ${fmt(ph.to)}</p></div>
+  ${wd===0?`<div class="card mind" style="margin-top:12px"><b>Sunday.</b> <span class="muted sm">Weigh in, then log the four numbers.</span><div class="btnrow"><a class="btn primary" href="#log">Open the check-in</a></div></div>`:''}`;
+}
+
+function vWeek(){
+  const su=S.setup, d=today(), ph=phaseFor(d);
+  const t=(x)=>x?`<span class="pill">${esc(x)}</span>`:'<span class="pill alert">set in Setup</span>';
+  return `
+  <div class="top"><div><h1>The week</h1><p class="muted">Same every week until the offer is signed. About 6 hours of prep, not more.</p></div></div>
+  <div class="grid g3">
+    <div class="card job"><div class="xs faint">Mon / Wed / Fri · 45 min ${t(su.slotWeekdayTime)}</div><h3 style="margin-top:4px">Build-and-judge floor</h3><p class="sm muted" style="margin-top:6px">20 min: one Python problem from this week’s category, solved cold and re-solved from memory three sessions later. 25 min: one build slice (mini-rag → tool-agent → eval-harness). Fridays: a judge rep instead — find three defects in AI-written code, aloud.</p></div>
+    <div class="card job"><div class="xs faint">Tue / Thu · 45 min ${t(su.slotTueThuTime)}</div><h3 style="margin-top:4px">Speak</h3><p class="sm muted" style="margin-top:6px">Record a 3-minute pitch of one of your systems, or one LLM design (Jan–Feb). Listen back once with the checklist. This is the interview, the English practice and the design prep in one slot. Protect it above all others.</p></div>
+    <div class="card job"><div class="xs faint">${esc(su.slotWeekendDay||'Weekend')} · 90 min ${t(su.slotWeekendTime)}</div><h3 style="margin-top:4px">Portfolio, then applications</h3><p class="sm muted" style="margin-top:6px">Nov–Jan: résumé, READMEs, LinkedIn, target list. Feb onward: 10–15 applications, half via referral or direct message. From March: live interviews.</p></div>
+    <div class="card body"><div class="xs faint">Six days</div><h3 style="margin-top:4px">Push / Pull / Legs × 2</h3><p class="sm muted" style="margin-top:6px">Double progression on the big lifts (6–10 reps, add weight when every set hits 10). 20-min incline walk on Push days with ${su.audio?`<b>${esc(su.audio)}</b>`:'treadmill-only audio'}.</p></div>
+    <div class="card body"><div class="xs faint">Every meal</div><h3 style="margin-top:4px">Protein anchor + carb rule</h3><p class="sm muted" style="margin-top:6px">130 g protein minimum, 150 on gym days. Roti/rice at two meals only, half portion. No sugary drinks, no packaged snacks. One scheduled free meal: ${su.freeMeal?`<b>${esc(su.freeMeal)}</b>`:'<span class="faint">pick on Sunday</span>'}.</p></div>
+    <div class="card mind"><div class="xs faint">Sunday morning</div><h3 style="margin-top:4px">The four numbers</h3><p class="sm muted" style="margin-top:6px">Weigh in before breakfast. Log problems, pitches, applications, scale. The verdict is computed by the rules — you never decide by feel.</p></div>
+  </div>
+  <div class="section-title"><h2>This week’s category</h2></div>
+  <div class="card">${(function(){const i=curriculumIndexFor(d);const c=CURRICULUM[i];return `<span class="pill job">${esc(c.cat)}</span> <span class="sm muted">${esc(c.w)}</span><ul style="margin-top:8px;padding-left:20px">${c.ps.map(p=>`<li>${esc(p)}</li>`).join('')}</ul><p class="sm muted" style="margin-top:8px">Exit test: ${esc(c.exit)}</p>`;})()}</div>
+  <div class="card" style="margin-top:12px">${rule('a week collapses and only one slot can survive,','keep Tue/Thu. Talking fluently about your own work carries more of this loop than anything else, and it costs 45 minutes with no laptop.')}</div>
+  <div class="section-title"><h2>Passes this month</h2></div>
+  <div class="card">${passesUI(d)}</div>`;
+}
+function curriculumIndexFor(d){const s=iso(d);const bounds=['2026-12-01','2026-12-15','2026-12-29','2027-01-12','2027-02-02'];let i=0;for(const b of bounds){if(s>=b)i++;}return Math.min(i,CURRICULUM.length-1);}
+function passesUI(d){const p=passes(d);return `<div class="grid g2"><div><div class="xs faint">Slot passes</div><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><b style="font-size:20px">${p.slot}/2</b><button class="btn sm" data-pass="slot">Use one</button></div></div><div><div class="xs faint">Diet passes</div><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><b style="font-size:20px">${p.diet}/2</b><button class="btn sm" data-pass="diet">Use one</button></div></div></div><p class="xs faint" style="margin-top:10px">A pass spends an allowance; it does not break a streak. Unused passes expire on the 1st.</p>`;}
+
+function vLog(){
+  const d=today(), w=wk(d), s=iso(d), lc=lastCheckin();
+  const sub=(location.hash.split('/')[1]||'checkin');
+  return `
+  <div class="top"><div><h1>Log</h1><p class="muted">Sunday check-in, weight line, problems, pitches, applications, lifts.</p></div></div>
+  <div class="seg" role="tablist" style="margin-bottom:14px">${[['checkin','Check-in'],['problems','Problems'],['pitches','Pitches'],['apps','Applications'],['lifts','Lifts'],['data','Backup']].map(x=>`<button role="tab" data-sub="${x[0]}" class="${sub===x[0]?'on':''}">${x[1]}</button>`).join('')}</div>
+  <div id="sub">${({checkin:subCheckin,problems:subProblems,pitches:subPitches,apps:subApps,lifts:subLifts,data:subData}[sub]||subCheckin)()}</div>`;
+}
+function subCheckin(){
+  const d=today(), w=wk(d), s=iso(d);
+  const lastW=S.checkins.slice(-6).map(c=>c.weight);
+  return `<div class="card"><h3>This week’s numbers</h3>
+    <div class="frow" style="margin-top:12px">
+      <div><label class="f" for="ciW">Scale (kg)</label><input id="ciW" class="in" type="number" step="0.1" inputmode="decimal" placeholder="e.g. 75.4"></div>
+      <div><label class="f" for="ciS">Nights under 6.5 h</label><input id="ciS" class="in" type="number" min="0" max="7" inputmode="numeric" value="0"></div>
+      <div><label class="f" for="ciD">Date</label><input id="ciD" class="in" type="date" value="${s}"></div>
+      <div><label class="f" for="ciP">Problems</label><input id="ciP" class="in" type="number" min="0" inputmode="numeric" value="${w.problems}"></div>
+      <div><label class="f" for="ciR">Pitches</label><input id="ciR" class="in" type="number" min="0" inputmode="numeric" value="${w.pitches}"></div>
+      <div><label class="f" for="ciA">Applications</label><input id="ciA" class="in" type="number" min="0" inputmode="numeric" value="${w.apps}"></div>
+    </div>
+    <label class="f" for="ciN" style="margin-top:12px">Note (only if a protocol fired)</label><textarea id="ciN" class="in" placeholder="e.g. crunch week at work; used one slot pass"></textarea>
+    <div class="btnrow"><button class="btn primary" id="ciSave">Save check-in</button><button class="btn" id="ciCopy">${I.copy}Copy the four lines</button></div>
+    <p class="help">The counters above are the week’s quick-adds from Today; edit them if they are wrong. Saving computes the verdict below.</p>
+    <div id="verdict">${verdictHTML()}</div>
+  </div>
+  <div class="card" style="margin-top:12px"><h3>Weight against the plan</h3>${chartHTML()}<p class="xs faint" style="margin-top:6px">Green line: the 0.3 kg/week target. Dots: your Sunday readings. Only two-week trends trigger changes.</p></div>
+  <div class="card" style="margin-top:12px"><h3>History</h3>${S.checkins.length?`<div class="tw"><table><tr><th>Date</th><th>Scale</th><th>Target</th><th>Problems</th><th>Pitches</th><th>Apps</th><th>Short nights</th><th></th></tr>${S.checkins.slice().reverse().map((c,i)=>`<tr><td>${fmt(c.date)}</td><td><b>${c.weight.toFixed(1)}</b></td><td class="faint">${targetWeightOn(c.date).toFixed(1)}</td><td>${c.problems}</td><td>${c.pitches}</td><td>${c.apps}</td><td>${c.sleep}</td><td><button class="btn sm" data-delci="${S.checkins.length-1-i}" aria-label="Delete">Delete</button></td></tr>`).join('')}</table></div>`:'<div class="empty">No check-ins yet. The first one is Sunday 22 November: the 76.0 baseline.</div>'}</div>`;
+}
+function verdictHTML(){
+  const c=S.checkins; if(c.length<1) return '';
+  const last=c[c.length-1], prev=c[c.length-2], prev2=c[c.length-3];
+  const out=[];
+  if(last.sleep>=3) out.push(['alert','Sleep first. Three or more short nights: no diet change this week. Lights-out rule for seven days.']);
+  if(prev){
+    const drop=prev.weight-last.weight;
+    if(c.length>2&&drop>0.7) out.push(['alert','Dropping faster than 0.7 kg/week. Add the carb back at one meal.']);
+    else if(prev2&&Math.abs(prev.weight-last.weight)<=0.1&&Math.abs(prev2.weight-prev.weight)<=0.1){ if(last.sleep<3) out.push(['alert','Flat two weeks with sleep in place: remove one roti or half the rice from one carb meal. If this is the third flat week, walk six days for two weeks instead.']); }
+    else if(drop>=0.1) out.push(['ok','On the line. Nothing changes.']);
+    else if(last.sleep<3) out.push(['ok','Up or flat one week only. Ignore; only two-week trends trigger changes.']);
+  } else out.push(['ok','Baseline logged. Nothing to decide yet.']);
+  const d=parse(last.date); const ph=phaseFor(d);
+  if(last.problems===0&&prev&&prev.problems===0) out.push(['alert','Problems zero two Sundays running: move the slot to the morning for two weeks; 15-min problem, 20-min build.']);
+  if(last.pitches===0&&prev&&prev.pitches===0) out.push(['alert','Pitches zero two Sundays running: record on the phone during the walk, two minutes, no listen-back.']);
+  if(ph.n>=3&&last.apps===0&&prev&&prev.apps===0) out.push(['alert','Applications zero two weeks: the résumé or the target list is the blocker. Next weekend slot goes to exactly one of those.']);
+  return out.map(o=>`<div class="verdict ${o[0]==='ok'?'ok':''}">${o[1]}</div>`).join('');
+}
+function chartHTML(){
+  const W=640,H=220,L=40,R=12,T=14,B=28;
+  const xs=s=>L+(daysBetween(START,s)/daysBetween(START,LAND))*(W-L-R);
+  const ys=w=>T+((77.5-w)/(77.5-66.5))*(H-T-B);
+  const line=WEIGHT_TARGETS.map((p,i)=>(i?'L':'M')+xs(p[0]).toFixed(1)+' '+ys(p[1]).toFixed(1)).join(' ');
+  const pts=S.checkins.map(c=>`<circle cx="${xs(c.date).toFixed(1)}" cy="${ys(c.weight).toFixed(1)}" r="4" fill="var(--job)"><title>${fmt(c.date)}: ${c.weight} kg</title></circle>`).join('');
+  const pl=S.checkins.length>1?`<path d="${S.checkins.map((c,i)=>(i?'L':'M')+xs(c.date).toFixed(1)+' '+ys(c.weight).toFixed(1)).join(' ')}" fill="none" stroke="var(--job)" stroke-width="1.5" opacity=".6"/>`:'';
+  const grid=[76,74,72,70,68].map(w=>`<line x1="${L}" x2="${W-R}" y1="${ys(w)}" y2="${ys(w)}" stroke="var(--line)"/><text x="${L-6}" y="${ys(w)+4}" font-size="10" text-anchor="end" fill="var(--ink-3)">${w}</text>`).join('');
+  const months=['2026-12-01','2027-01-01','2027-02-01','2027-03-01','2027-04-01','2027-05-01'].map(m=>`<text x="${xs(m)}" y="${H-8}" font-size="10" text-anchor="middle" fill="var(--ink-3)">${MONTHS[parse(m).getMonth()]}</text>`).join('');
+  const tx=xs(iso(today())); const todayLine=tx>L&&tx<W-R?`<line x1="${tx}" x2="${tx}" y1="${T}" y2="${H-B}" stroke="var(--alert)" stroke-dasharray="3 3"/>`:'';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Weight readings against the target line">${grid}${months}${todayLine}<path d="${line}" fill="none" stroke="var(--body)" stroke-width="2"/>${pl}${pts}</svg>`;
+}
+function subProblems(){
+  const d=today(); const ci=curriculumIndexFor(d);
+  return CURRICULUM.map((c,i)=>acc(`${c.cat} — ${c.w}`,`<p class="sm muted">Exit test: ${esc(c.exit)}</p>`+c.ps.map(p=>{const k=c.cat+'|'+p;const r=S.problems[k]||{};const due=r.date?iso(new Date(parse(r.date).getTime()+7*dayMs)):null;return row('p:'+k,p,r.date?'Solved '+fmt(r.date)+(r.resolved?' · re-solved '+fmt(r.resolved):(due?' · re-solve due '+fmt(due):'')):'Not yet',!!r.date,null)+(r.date&&!r.resolved?`<div style="padding:0 0 10px 36px"><button class="btn sm" data-resolve="${esc(k)}">Mark re-solved from memory</button></div>`:'');}).join(''),i===ci)).join('')+`<div class="card" style="margin-top:12px"><h3>Rules</h3>${rule('you solve a problem,','log it here; re-solve it from a blank file about a week later without looking. The re-solve is the learning.','Retrieval beats re-reading by g ≈ 0.5–0.7; spacing beats massing by g ≈ 0.74.')}${rule('a problem takes more than 25 minutes with no progress,','read the solution, close it, write the idea in one sentence, schedule the re-solve. Never two sessions on one problem.')}</div>`;
+}
+function subPitches(){
+  const d=today();
+  return `<div class="card"><h3>Record a pitch</h3><div class="frow" style="margin-top:12px"><div><label class="f" for="pS">System or design</label><select id="pS" class="in"><option>RAG benchmark</option><option>Quantum optimisation platform</option><option>SLM fine-tuning pipeline</option><option>Solution Hub</option><option>Design: RAG at scale</option><option>Design: eval pipeline</option><option>Design: tool-using agent</option><option>Design: fine-tuning pipeline</option><option>Design: serving and cost</option><option>Design: guardrails and PII</option><option>STAR story</option><option>Other</option></select></div><div><label class="f" for="pD">Date</label><input id="pD" class="in" type="date" value="${iso(d)}"></div><div><label class="f" for="pL">Length (min)</label><input id="pL" class="in" type="number" step="0.5" inputmode="decimal" value="3"></div></div>
+    <div style="margin-top:12px"><div class="f">Listen-back checklist (tick three)</div><div class="grid g2">${['Said the number','Named the trade-off with “because”','Stopped at 3 minutes','No sentence over 25 words','No words I would not use with a friend','Paused instead of “basically / actually / so”'].map((c,i)=>`<label style="display:flex;gap:8px;align-items:center;min-height:36px"><input type="checkbox" class="pc" value="${i}"> <span class="sm">${c}</span></label>`).join('')}</div></div>
+    <div class="btnrow"><button class="btn primary" id="pSave">Log pitch</button></div></div>
+    <div class="card" style="margin-top:12px"><h3>The five-part shape</h3><ol class="sm" style="padding-left:20px;margin-top:8px"><li><b>Problem</b> — who had it, what it cost, one sentence.</li><li><b>Design</b> — three components and the data flow.</li><li><b>Trade-off</b> — one decision, what you gave up, why.</li><li><b>The number</b> — what moved, measured how.</li><li><b>What I’d change</b> — one limitation and the fix.</li></ol></div>
+    <div class="card" style="margin-top:12px"><h3>Pitch log · ${S.pitches.length}</h3>${S.pitches.length?`<div class="tw"><table><tr><th>Date</th><th>Subject</th><th>Min</th><th>Checklist</th></tr>${S.pitches.slice().reverse().map(p=>`<tr><td>${fmt(p.date)}</td><td>${esc(p.subject)}</td><td>${p.len}</td><td>${p.checks}/6</td></tr>`).join('')}</table></div>`:'<div class="empty">First recording: Sunday 22 November, the RAG benchmark.</div>'}</div>`;
+}
+function subApps(){
+  const d=today(); const byStage={};S.apps.forEach(a=>byStage[a.stage]=(byStage[a.stage]||0)+1);
+  const stages=['Applied','Screen','Technical','Take-home','Design','Final','Offer','Rejected','No reply'];
+  const referred=S.apps.filter(a=>a.channel==='Referral'||a.channel==='Direct message').length;
+  const screenRate=S.apps.length?Math.round(100*S.apps.filter(a=>stages.indexOf(a.stage)>=1&&a.stage!=='Rejected'&&a.stage!=='No reply').length/S.apps.length):0;
+  return `<div class="grid g3"><div class="card stat"><small>Total</small><b>${S.apps.length}</b><div class="sub">${referred} with referral / DM (${S.apps.length?Math.round(100*referred/S.apps.length):0}%)</div></div><div class="card stat"><small>Reached a round</small><b>${screenRate}%</b><div class="sub">${screenRate<10&&S.apps.length>=25?'<span style="color:var(--alert)">Under 10% after 25 → stop-and-fix rule</span>':'target ≥ 10%'}</div></div><div class="card stat"><small>Finals / offers</small><b>${(byStage.Final||0)+(byStage.Offer||0)}</b><div class="sub">target 2+ by 31 Mar</div></div></div>
+  <div class="card" style="margin-top:12px"><h3>Add an application</h3><div class="frow" style="margin-top:12px"><div><label class="f" for="aC">Company</label><input id="aC" class="in" placeholder="Company"></div><div><label class="f" for="aR">Role</label><input id="aR" class="in" placeholder="AI Engineer"></div><div><label class="f" for="aCh">Channel</label><select id="aCh" class="in"><option>Referral</option><option>Direct message</option><option>Career page</option><option>LinkedIn</option><option>Naukri / Instahyre</option><option>Wellfound</option><option>Other</option></select></div><div><label class="f" for="aD">Date</label><input id="aD" class="in" type="date" value="${iso(d)}"></div><div><label class="f" for="aCt">Contact</label><input id="aCt" class="in" placeholder="Name (optional)"></div><div><label class="f" for="aN">Next action</label><input id="aN" class="in" placeholder="Follow up in 7 days"></div></div><div class="btnrow"><button class="btn primary" id="aSave">Add</button></div></div>
+  <div class="card" style="margin-top:12px"><h3>Pipeline</h3>${S.apps.length?`<div class="tw"><table><tr><th>Date</th><th>Company · role</th><th>Channel</th><th>Stage</th><th>Next</th><th></th></tr>${S.apps.map((a,i)=>({a,i})).reverse().map(({a,i})=>`<tr><td>${fmt(a.date)}</td><td><b>${esc(a.company)}</b><br><span class="faint sm">${esc(a.role)}${a.contact?' · '+esc(a.contact):''}</span></td><td>${esc(a.channel)}</td><td><select class="in" style="min-height:36px;padding:4px 8px" data-stage="${i}">${stages.map(s=>`<option ${a.stage===s?'selected':''}>${s}</option>`).join('')}</select></td><td class="sm">${esc(a.next||'')}</td><td><button class="btn sm" data-delapp="${i}">Delete</button></td></tr>`).join('')}</table></div>`:'<div class="empty">Calibration batch of 15 on 11 January; real volume from 1 February.</div>'}</div>
+  <div class="card" style="margin-top:12px">${rule('a message gets no reply in 7 days,','one follow-up of two lines, then stop. Never a third.')}${rule('you reach a technical round,','that week’s build slices reproduce whatever the round asked, and the next pitch is that company’s design.')}</div>`;
+}
+function subLifts(){
+  const d=today(); const lifts=['Bench / press','Row','Squat / leg press','Deadlift / RDL','Pull-down / pull-up','Overhead press'];
+  const last={}; S.lifts.forEach(l=>{last[l.lift]=l;});
+  const warn=lifts.filter(L=>{const h=S.lifts.filter(l=>l.lift===L).slice(-3);return h.length===3&&h[2].w*h[2].r<h[1].w*h[1].r&&h[1].w*h[1].r<h[0].w*h[0].r;});
+  return `${warn.length?`<div class="verdict">Top set falling two sessions running on: ${warn.map(esc).join(', ')}. Add protein today and check sleep. Do not cut carbs.</div>`:''}
+  <div class="card" style="margin-top:12px"><h3>Log a top set</h3><div class="frow" style="margin-top:12px"><div><label class="f" for="lL">Lift</label><select id="lL" class="in">${lifts.map(l=>`<option>${l}</option>`).join('')}</select></div><div><label class="f" for="lW">Weight (kg)</label><input id="lW" class="in" type="number" step="0.5" inputmode="decimal"></div><div><label class="f" for="lR">Reps</label><input id="lR" class="in" type="number" min="1" inputmode="numeric"></div></div><div class="btnrow"><button class="btn primary" id="lSave">Log</button></div><p class="help">Double progression: keep the weight until every set hits 10 reps, then add the smallest plate.</p></div>
+  <div class="card" style="margin-top:12px"><h3>Latest top sets</h3>${Object.keys(last).length?`<div class="tw"><table><tr><th>Lift</th><th>Top set</th><th>Date</th></tr>${lifts.filter(l=>last[l]).map(l=>`<tr><td>${esc(l)}</td><td><b>${last[l].w} kg × ${last[l].r}</b></td><td class="faint">${fmt(last[l].date)}</td></tr>`).join('')}</table></div>`:'<div class="empty">Log the top set of each big lift once a week; this is the muscle alarm.</div>'}</div>`;
+}
+function subData(){
+  return `<div class="card"><h3>Backup</h3><p class="sm muted" style="margin-top:6px">Everything is saved in this browser only. Copy this block somewhere safe once a month, or to move to another device. Paste it back to restore.</p><textarea id="bk" class="in" style="min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:10px">${esc(JSON.stringify(S))}</textarea><div class="btnrow"><button class="btn" id="bkCopy">${I.copy}Copy</button><button class="btn" id="bkRestore">Restore from the box</button><button class="btn" id="bkReset">Reset everything</button></div></div>`;
+}
+
+function vRules(){
+  return `<div class="top"><div><h1>Rules</h1><p class="muted">Pre-written. When one fires, do what it says and redesign nothing.</p></div></div>
+  <div class="search"><input class="in" id="rq" placeholder="Search a situation: holiday, sick, plateau, rejected…" aria-label="Search protocols"></div>
+  <div id="rlist">${protocolsHTML('')}</div>
+  <div class="section-title"><h2>Why the week is shaped like this</h2></div>
+  ${acc('Intentions don’t move behaviour; if-then plans do','<p>Goal intentions alone translate into action about half the time. Writing the behaviour as “if X, then Y” improved goal attainment by a medium-to-large effect (d ≈ 0.65) across 94 studies, confirmed in a 2024 update over 642 tests. Largest where plans usually die: getting started, and protecting an activity from interruption.</p><p class="sm muted">Applied: every rule here is an if-then; the week has fixed cues so behaviour fires on the cue, not on mood.</p>')}
+  ${acc('A habit takes about two months; one miss costs nothing','<p>Median 66 days to automaticity (range 18–254). Missing a single day did not change the trajectory. The danger zone is roughly day 20–50: for you, 7 December to 6 January, through the holidays.</p><p class="sm muted">Applied: never miss twice; the holiday rule is pre-written.</p>')}
+  ${acc('Same cue, same place, same time','<p>Stable context predicts faster habit formation; arbitrary timing slows it regardless of how often the box is ticked.</p><p class="sm muted">Applied: slot times are set once in Setup and never moved.</p>')}
+  ${acc('Fresh starts help; “what the hell” kills','<p>Effort rises at the start of a cycle (a Monday, a month). The opposite force: one small failure read as “I already blew it” collapses the whole routine. The supported fix is planned slack.</p><p class="sm muted">Applied: two passes a month per area, written before the month starts; every Monday and 1st is a scripted reset.</p>')}
+  ${acc('Pair the thing you avoid with the thing you want','<p>Locking audiobooks to the gym raised attendance by about 55% in a controlled study.</p><p class="sm muted">Applied: treadmill-only audio; one weekend pleasure only after the application block.</p>')}
+  ${acc('Don’t visualise the offer; contrast it with the obstacle','<p>Vivid positive fantasies predicted less effort and worse outcomes (lower starting salaries, less weight lost). Mental contrasting plus an if-then plan (WOOP) has a small-to-moderate, reliable effect.</p><p class="sm muted">Applied: one 5-minute WOOP at the start of each phase. No vision boards.</p>')}
+  ${acc('Learning that sticks: retrieve, space, interleave','<p>Testing yourself beats re-reading (g ≈ 0.50–0.70). Spreading practice beats cramming (g ≈ 0.74). Mixing categories after you know them beats blocking (g ≈ 0.42).</p><p class="sm muted">Applied: every problem is re-solved from memory a week later; designs are spoken, not read; categories are blocked for four weeks, then mixed.</p>')}
+  ${acc('Measure the system, not the person','<p>Four numbers every Sunday. When one stalls two weeks running, the structure is wrong and the structure changes. Discipline is never the variable under review.</p>')}`;
+}
+function protocolsHTML(q){
+  q=q.trim().toLowerCase();
+  const list=PROTOCOLS.filter(p=>!q||(p.s+' '+p.p+' '+p.tags).toLowerCase().includes(q));
+  if(!list.length) return '<div class="empty">No rule matches. Try a shorter word.</div>';
+  return list.map(p=>`<div class="rule"><div class="if">${esc(p.s)},</div><div class="then">${esc(p.p)}</div></div>`).join('');
+}
+
+function vChecks(){
+  const t=iso(today()); const filt=(location.hash.split('/')[1]||'open');
+  let items=CHECKPOINTS; if(filt==='open') items=items.filter(c=>!S.checkpoints[c.d+'|'+c.t]); if(filt==='done') items=items.filter(c=>S.checkpoints[c.d+'|'+c.t]);
+  const byPh={}; items.forEach(c=>(byPh[c.ph]=byPh[c.ph]||[]).push(c));
+  const done=CHECKPOINTS.filter(c=>S.checkpoints[c.d+'|'+c.t]).length;
+  return `<div class="top"><div><h1>Checkpoints</h1><p class="muted">${done}/${CHECKPOINTS.length} done. Tick a row when it is actually done, not when it is planned.</p></div><div class="seg">${[['open','Open'],['all','All'],['done','Done']].map(x=>`<button data-cf="${x[0]}" class="${filt===x[0]?'on':''}">${x[1]}</button>`).join('')}</div></div>
+  <div class="tl">${PHASES.filter(p=>byPh[p.n]).map(p=>`<div class="ph">Phase ${p.n} · ${esc(p.name)} <span class="faint" style="font-weight:500">· ${fmt(p.from)} → ${fmt(p.to)}</span></div>${byPh[p.n].map(c=>{const id='c:'+c.d+'|'+c.t;const dn=!!S.checkpoints[c.d+'|'+c.t];const od=c.d<t&&!dn;return row(id,c.t,'',dn,c.k,fmt(c.d)+(od?' · past due':''));}).join('')}`).join('')||'<div class="empty">Nothing here.</div>'}</div>
+  <div class="section-title"><h2>Weight line</h2></div>
+  <div class="card"><div class="tw"><table><tr><th>Date</th><th>Target</th></tr>${WEIGHT_TARGETS.map(p=>`<tr><td>${fmt(p[0])}</td><td class="kg">${p[1].toFixed(1)} kg</td></tr>`).join('')}</table></div></div>`;
+}
+
+function vJob(){
+  return `<div class="top"><div><h1>Job manual</h1><p class="muted">AI Engineer / Applied LLM Engineer. ₹12 LPA or more. Offer signed by 30 April.</p></div></div>
+  ${acc('The market, as the data describes it','<p>Published 2026 bands for AI engineers at 0–2 years cluster around ₹6–15 LPA; foundit (Sept 2026) puts 0–3-year AI professionals at ₹8.9–15.4 LPA; the top quartile at 0–2 years is around ₹15 LPA. GenAI and MLOps skills carry a 20–40% premium. ₹12 at 1.5 years is upper-middle of the band — realistic with shipped LLM systems and numbers, unrealistic with a résumé that reads “Jr Data Scientist, ₹4.8 LPA”.</p><div class="tw"><table><tr><th>Tier</th><th>1–2 yr pay</th><th>Loop weights</th><th>Priority</th></tr><tr><td>Funded AI-first startups</td><td>₹10–20 LPA + ESOPs</td><td>Build round, project depth, design</td><td>Highest</td></tr><tr><td>Mid-size product companies</td><td>₹10–18 LPA</td><td>Practical + one medium coding + design</td><td>High</td></tr><tr><td>GCCs (NCR / Bengaluru / Hyderabad)</td><td>₹12–22 LPA</td><td>Structured: coding + fundamentals + design + behavioural</td><td>High, from Feb</td></tr><tr><td>Consultancy AI practices</td><td>₹8–14 LPA</td><td>Project discussion, client scenario</td><td>Fallback</td></tr><tr><td>Big tech</td><td>₹20–45 LPA</td><td>2–3 algorithmic rounds at medium+</td><td>Out of scope until the offer</td></tr></table></div><p class="xs faint">Compiled from commercial salary guides; ranges, not promises.</p>',true)}
+  ${acc('The loop, round by round','<p>Startups and mid-size companies increasingly replace LeetCode with a practical round — build a small RAG pipeline or an agent with tool calls in 60–90 minutes, or a take-home — and the take-home is reported as the most differentiating round at Indian product companies. Two newer formats: an AI-off live round on fundamentals, and an AI-assisted round where you are graded on judging generated code.</p><div class="tw"><table><tr><th>Round</th><th>Tests</th><th>Weight</th><th>Trained in</th></tr><tr><td>Recruiter screen</td><td>What you shipped, stack, pay expectations</td><td>Gate</td><td>Pitch #1, CTC scripts</td></tr><tr><td>Technical screen</td><td>LLM fundamentals in practice + short Python</td><td>High</td><td>Fundamentals list, build reps</td></tr><tr><td>Practical / take-home</td><td>Build against a model API; defend live</td><td>Highest</td><td>Build slices</td></tr><tr><td>AI-assisted review</td><td>Find the bug, missing test, cost blow-up</td><td>Rising</td><td>Friday judge reps</td></tr><tr><td>LLM system design</td><td>RAG/agent; graded on named trade-offs</td><td>High</td><td>Six designs</td></tr><tr><td>Project deep-dive</td><td>Defend a system you built; a number</td><td>Highest</td><td>Pitches</td></tr><tr><td>Behavioural</td><td>Ownership in ambiguous work</td><td>Medium</td><td>Five stories</td></tr><tr><td>Algorithmic coding</td><td>Easy–medium, 1–2 problems</td><td>Low–medium</td><td>Problem reps</td></tr></table></div>')}
+  ${acc('Portfolio: three systems, résumé, READMEs','<ol><li><b>RAG benchmark</b> — the eval story: retrieval metrics, context sweep, DeepEval. Designing the eval suite is the reported differentiator.</li><li><b>Quantum optimisation platform</b> — shipped product end to end.</li><li><b>SLM fine-tuning pipeline</b> — training and data.</li></ol>'+rule('a system has no number attached,','measuring one is the first weekend task: p50/p95 latency, cost per 1k queries, hit rate at k, eval score before vs after, hours saved, users.')+'<h4 style="margin-top:14px">Résumé rules</h4><ul><li>One page. Title line <b>AI Engineer / Data Scientist</b>. “Jr” appears nowhere.</li><li>Bullets: verb + what you built + the number + stack. Four for AIONOS, two for Beerantum. Outcomes, not duties.</li><li>“Selected systems” block: three systems, three lines each (problem, design, metric), repo links.</li><li>Skills as one grouped line: LLM stack · Python/ML · data · infra. No bars.</li><li>Save as <span class="kbd">Rudraksh_Sharma_AI_Engineer.pdf</span>; keep a plain-text copy for portals.</li></ul><h4 style="margin-top:14px">README rules</h4><ul><li>First screen: one sentence, one diagram, one results table. 60 seconds of a hiring manager’s attention.</li><li>Then: run in three commands; design decisions and what you rejected; limitations; next steps.</li><li>Work owns the code → sanitised re-implementation on synthetic data, and say so.</li></ul>')}
+  ${acc('Build-and-judge curriculum (Mon/Wed/Fri)','<p>78 sessions. 20 min problem, 25 min build. No DP, graphs, or hard problems until the offer is signed.</p><div class="tw"><table><tr><th>Weeks</th><th>Category</th><th>Exit test</th></tr>'+CURRICULUM.map(c=>`<tr><td>${esc(c.w)}</td><td>${esc(c.cat)}</td><td>${esc(c.exit)}</td></tr>`).join('')+'</table></div><h4 style="margin-top:14px">Build slices</h4><div class="tw"><table><tr><th>Phase</th><th>Artefact</th><th>Slices</th></tr><tr><td>Nov–Dec</td><td><b>mini-rag</b>: ingest 20 docs, chunk, embed, top-k, cited answers; 10-question eval with hit rate and a faithfulness check</td><td>12</td></tr><tr><td>Jan</td><td><b>tool-agent</b>: two tools, retry limit, structured-output validation, call log, three failure cases handled</td><td>10</td></tr><tr><td>Feb</td><td><b>eval-harness</b>: prompt set × two models, LLM judge + rule check, cost and latency per run</td><td>8</td></tr><tr><td>Mar–Apr</td><td>Rebuild whatever a live loop asked, under time</td><td>—</td></tr></table></div>'+rule('it is a Friday build slice,','it is a judge rep: generate a 40-line solution with an AI assistant, find three defects aloud (bug, missing test, cost/latency), fix them.','The AI-assisted round grades judgement, not production.')+'<h4 style="margin-top:14px">Fundamentals — two per week, said aloud in two sentences</h4><ul>'+FUNDAMENTALS.map(f=>`<li>${esc(f)}</li>`).join('')+'</ul>')}
+  ${acc('Pitch protocol (Tue/Thu)','<ol><li><b>Problem</b> — who had it, what it cost, one sentence.</li><li><b>Design</b> — three components and the data flow. Draw it in the air.</li><li><b>Trade-off</b> — one decision, what you gave up, why.</li><li><b>The number</b> — what moved, measured how.</li><li><b>What I’d change</b> — one limitation and the fix.</li></ol><p class="sm muted">Listen-back: tick three of six (the checklist is in Log → Pitches).</p>'+rule('the recording is bad,','it still counts. The number is recordings made, not recordings you liked. Re-record the same system next Tuesday.')+rule('English feels like the weak point,','the fix is volume of speaking about things you know: 52 recordings over 26 weeks is the course. A separate course returns after the offer.'))}
+  ${acc('The six designs (Jan–Feb)','<p>Skeleton for every design, spoken in 10 minutes: requirements (3 questions) → data flow → three trade-offs with numbers (cost, latency, quality) → evaluation offline and online → failure and the guardrail → what breaks at 100× → what you ship in week one.</p><div class="tw"><table><tr><th>When</th><th>Design</th><th>Trade-offs they listen for</th></tr>'+DESIGNS.map(d=>`<tr><td>${d[0]}</td><td><b>${esc(d[1])}</b></td><td class="sm">${esc(d[2])}</td></tr>`).join('')+'</table></div>')}
+  ${acc('Five stories (by 17 Jan)','<p>90 seconds each, STAR shape, a number at the end.</p><ol>'+STORIES.map(s=>`<li><b>${s[0]}</b> — ${esc(s[1])}</li>`).join('')+'</ol>')}
+  ${acc('Applications: referral-first (from 1 Feb)','<p>Referred candidates are hired at roughly 28–34% versus 2–7% for cold applicants. The weekend slot goes to referrals and direct messages first, job boards last.</p><ul><li>10–15 a week; at least half via referral or direct message.</li><li>Five new first-degree conversations a week (NSUT/DU alumni, Qiskit community, ex-colleagues, hackathon contacts).</li><li>Build the 40-company list by 24 January: funded AI startups, mid-size product, GCCs, AI practices.</li><li>Apply within 48 hours of a posting; older postings get a message, not an application.</li></ul>'+SCRIPTS.slice(0,2).map((s,i)=>script(s,i)).join('')+rule('no reply in 7 days,','one two-line follow-up, then stop. Never a third.')+rule('first-round rate under 10% after 25 applications,','stop for a week; one outside résumé review; rebuild the list. Then resume.'))}
+  ${acc('Compensation scripts','<p>Recruiters ask current and expected CTC almost every time, and current CTC is often verified with payslips. Disclose it honestly (fixed and variable separated), anchor expectations on the role band, give a range with your real target near the bottom. Competing offers are the strongest lever.</p>'+SCRIPTS.slice(2).map((s,i)=>script(s,i+2)).join('')+'<ul><li>Never a single number. Defer before technical rounds if you can.</li><li>Other offers: be truthful; a live second process is also leverage.</li><li>Every offer in writing — fixed, variable, bonus, date — before resigning.</li><li>Notice period: find it on 24 November, enter it in Setup.</li></ul>')}`;
+}
+
+function vBody(){
+  return `<div class="top"><div><h1>Body manual</h1><p class="muted">76 → 68 kg by 31 May, strength held, lacto-ovo, no tracking.</p></div></div>
+  ${acc('Why 0.3 kg a week, on purpose','<p>8 kg over 28 weeks ≈ 0.3 kg/week ≈ 0.4% of bodyweight. In the key trial, the group losing 0.7%/week lost more fat and <i>gained</i> lean mass and strength; the 1.4%/week group did not. Your rate sits under that window so it survives hostel food and interview stress without tracking. Energy-wise it is a 300–350 kcal daily deficit, supplied by half carbs at two meals (~200–250), the longer walk (~80–100), and chana instead of snacks. Nothing else needs cutting.</p>',true)}
+  ${acc('Protein: 130 g minimum, 150 g on gym days','<p>The largest meta-analysis puts the plateau around 1.6 g/kg/day with lifting; evidence for people dieting while lifting points higher — up to ~1.9 g/kg bodyweight. In a four-week trial with a large deficit and six days of training, the 2.4 g/kg group gained lean mass while losing fat. 130–150 g is 1.7–2.0 g/kg at 76 kg and stays in range as you drop.</p><div class="tw"><table><tr><th>Food</th><th>Portion</th><th>Protein</th><th>Note</th></tr>'+PROTEIN.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td><b>${p[2]}</b></td><td class="sm faint">${p[3]}</td></tr>`).join('')+'</table></div><div class="grid g2" style="margin-top:12px"><div class="card"><h4>Gym day ≈ 150 g</h4><ul class="sm"><li>Breakfast: 3 eggs + milk — 28 g</li><li>Lunch: 2 katori dal + 100 g paneer/soya + 1 roti + salad — 35 g</li><li>Post-workout: 1 scoop VegPro — ~22 g</li><li>Evening: 200 g dahi + 30 g chana — 15 g</li><li>Dinner: 1 egg + dal + 150 g paneer/soya + half rice — 45 g</li></ul></div><div class="card"><h4>Rest day ≈ 130 g</h4><ul class="sm"><li>Breakfast: 3 eggs — 20 g</li><li>Lunch: 2 katori dal + 100 g paneer/soya + 1 roti — 35 g</li><li>Afternoon: 200 g dahi + milk — 16 g</li><li>Evening: 30 g peanuts — 7 g</li><li>Dinner: 2 eggs + dal + 150 g paneer/soya + half rice — 50 g</li></ul></div></div>'+rule('the mess has no paneer or soya that day,','2 extra eggs at that meal plus dahi. Keep 500 g soya chunks in the room; soak in hot water, salt and lemon.')+rule('no protein by 14:00,','eat the eggs now, whatever is happening.'))}
+  ${acc('Carbs, the plate rule, the mess','<ul><li>Roti/rice at <b>two</b> meals only; at those meals <b>half</b> the hostel portion.</li><li>Plate order: protein, vegetables, carbs last.</li><li>No sugary drinks, packaged snacks, mess sweets. Tea/coffee with milk, no sugar. Fruit any time.</li><li>One free meal a week, chosen on Sunday and written in Setup. A second is a diet pass.</li><li>One litre of water before lunch.</li></ul>')}
+  ${acc('Training: keep the split, add the walk, one progression rule','<ul><li>PPL × 2, Sunday off. Unchanged.</li><li>Incline walk 20 min after lifting on Push days (incline 8–12%, talking pace). Treadmill-only audio.</li><li>Double progression on press, row, squat/leg press, deadlift/RDL, pull-down: keep the weight until every set hits 10, then add the smallest plate. Log the top set in Log → Lifts.</li><li>Creatine monohydrate 3–5 g daily is optional, vegetarian, cheap, and the best-studied supplement for lean-mass retention. Nothing else.</li></ul>'+rule('the top set of a big lift drops two sessions in a row,','add 2 eggs or a scoop that day and check sleep before touching anything else. Strength falling is the muscle warning.')+rule('you miss a gym day,','the split continues from where it stopped. Two misses → next session at 70% volume.'))}
+  ${acc('Sleep is a tracked number','<p>Same diet, 5.5 h instead of 8.5 h of sleep: 55% less fat loss and 60% more lean-mass loss, with more hunger. An hour of sleep is worth more than an hour of cardio for this goal.</p><ul><li>In bed by 23:30, up by 07:00 on gym days. Seven hours is the floor.</li><li>Phone out of reach at 23:15; the Tue/Thu recording is the last screen task, never the laptop.</li><li>Count nights under 6.5 h; three or more in a week blocks any diet change.</li></ul>')}
+  ${acc('Weigh-in and the adjustment algorithm','<p>Sunday morning, after the toilet, before food, same scale, same clothes. One reading. Log it; the verdict is computed in Log.</p>'+rule('this week is lower by 0.1–0.7 kg,','nothing changes.')+rule('two consecutive weeks show no drop (±0.1),','check sleep first; if three short nights, fix sleep and do not cut food. Else remove one roti or half the rice from one carb meal.')+rule('the drop is more than 0.7 kg in a week (after week 2),','add the carb back.')+rule('the scale is up after a free meal, travel, or a salty dinner,','ignore it; it is water.')+rule('three weeks flat with sleep in place,','walk six days for two weeks before any further food change.'))}
+  ${acc('After 68 kg','<p>On 31 May, full carb portions at two meals, two free meals a week. Protein anchor and the Sunday weigh-in stay for ever. 1.5 kg above 68 for two weeks → carb rule back for a month.</p>')}`;
+}
+function vMoney(){
+  return `<div class="top"><div><h1>Money</h1><p class="muted">Nothing changes until the offer is signed. Then a fixed sequence.</p></div></div>
+  <div class="card money"><p>The salary jump is the financial goal; everything else is sequencing. Until the offer, the ₹5,000 SIP across the three current funds stays exactly as it is — no new funds, no switching, no pausing. Research time spent on finance before May is time taken from the job that funds the finances.</p></div>
+  ${acc('The month the first new salary lands','<ol><li><b>Emergency fund first.</b> 3–6 months of essential expenses (expenses, not income) in a liquid fund or sweep-in FD. Target 3 months within 6 months of joining, 6 within a year. Automate a salary-day transfer to a separate, labelled account.</li><li><b>Save the raise.</b> At least half the difference between the new take-home and the old goes to the fund until step 1 is done, then to the SIP — before lifestyle absorbs it.</li><li><b>Then step up the SIP</b> by a fixed percentage each year (a step-up SIP does it automatically).</li><li><b>Insurance check</b> in the first quarter: confirm employer health cover; add a personal health policy if thin; term insurance only if someone depends on your income.</li><li><b>Only after all of this:</b> revisit fund choices for the 3-year horizon.</li></ol><p class="xs faint">Sequencing from standard personal-finance guidance, not advice from a licensed advisor.</p>',true)}`;
+}
+function vSetup(){
+  const s=S.setup;
+  return `<div class="top"><div><h1>Setup</h1><p class="muted">Set once on 18 November. Same cue, same place, same time — the habit forms on the cue.</p></div></div>
+  <div class="card"><div class="frow"><div><label class="f" for="sWT">Mon/Wed/Fri slot time</label><input id="sWT" class="in" type="time" value="${esc(s.slotWeekdayTime)}"></div><div><label class="f" for="sWP">Laptop spot</label><input id="sWP" class="in" placeholder="e.g. hostel reading room, desk 3" value="${esc(s.slotWeekdayPlace)}"></div><div><label class="f" for="sTT">Tue/Thu recording time</label><input id="sTT" class="in" type="time" value="${esc(s.slotTueThuTime)}"></div><div><label class="f" for="sWD">Weekend block day</label><select id="sWD" class="in"><option ${s.slotWeekendDay==='Sat'?'selected':''}>Sat</option><option ${s.slotWeekendDay==='Sun'?'selected':''}>Sun</option></select></div><div><label class="f" for="sWTm">Weekend block time</label><input id="sWTm" class="in" type="time" value="${esc(s.slotWeekendTime)}"></div><div><label class="f" for="sAu">Treadmill-only audio</label><input id="sAu" class="in" placeholder="podcast / series / album" value="${esc(s.audio)}"></div><div><label class="f" for="sNP">Notice period (days)</label><input id="sNP" class="in" inputmode="numeric" placeholder="from the offer letter" value="${esc(s.noticePeriod)}"></div><div><label class="f" for="sFM">This week’s free meal</label><input id="sFM" class="in" placeholder="e.g. Sat dinner, chole bhature" value="${esc(s.freeMeal)}"></div></div><div class="btnrow"><button class="btn primary" id="sSave">Save</button></div></div>
+  <div class="card" style="margin-top:12px"><h3>Phase WOOP (5 minutes, start of each phase)</h3><p class="sm muted" style="margin-top:6px">Wish → Outcome → the one real Obstacle → Plan as if-then. Write it in the check-in note that Sunday. Never a vision board: positive fantasy alone lowers effort.</p></div>
+  <div class="card" style="margin-top:12px"><h3>Appearance</h3><div class="btnrow"><button class="btn sm" data-theme="auto">System</button><button class="btn sm" data-theme="light">Light</button><button class="btn sm" data-theme="dark">Dark</button></div></div>`;
+}
+function vSources(){
+  return `<div class="top"><div><h1>Sources</h1><p class="muted">What each rule rests on. Commercial guides are labelled as such.</p></div></div>${SOURCES.map(s=>acc(s[0],`<p class="sm">${esc(s[1])}</p>`,true)).join('')}<p class="xs faint" style="margin-top:16px">Weight and protein figures are planning targets from the cited literature, not medical guidance.</p>`;
+}
+
+const RESOURCES=[
+  {slot:'Mon / Wed / Fri — problem half',k:'job',items:[
+    ['NeetCode 150','Free','The exact easy–medium problem set, grouped by the same categories as the curriculum; video solutions for every problem.','https://neetcode.io'],
+    ['LeetCode (free tier)','Free','Where you actually type the solutions. Search the problem names from the curriculum; ignore premium.','https://leetcode.com'],
+    ['Tech Interview Handbook','Free','Grind-75 style study plan plus the best free behavioural-round guide; use the behavioural section for the five stories.','https://www.techinterviewhandbook.org'],
+    ['Python docs — collections, itertools','Free','Counter, defaultdict, deque, sorted with key: the whole toolkit for the hashmap and string weeks.','https://docs.python.org/3/library/collections.html']]},
+  {slot:'Mon / Wed / Fri — build half',k:'job',items:[
+    ['Anthropic docs: Messages API, tool use, embeddings guide','Free (pay per token, a few rupees per run)','Reference for mini-rag and tool-agent. The tool-use page is the agent round in one document.','https://docs.claude.com'],
+    ['OpenAI Cookbook','Free','Worked notebooks for RAG, evals and function calling; copy the patterns, not the code.','https://github.com/openai/openai-cookbook'],
+    ['Hugging Face Learn (LLM course, Agents course)','Free','Agents course is the best free structured path for tool-agent; LLM course covers fine-tuning for the SovereignAI story.','https://huggingface.co/learn'],
+    ['DeepLearning.AI short courses','Free','1–2 hour courses on RAG, evals, agents, LangChain, LlamaIndex. Pick one per build artefact, no more.','https://www.deeplearning.ai/short-courses/'],
+    ['DeepEval / Ragas docs','Free (open source)','For the eval-harness artefact and the RAG benchmark pitch; you already use DeepEval.','https://docs.confident-ai.com'],
+    ['Hamel Husain — “Your AI product needs evals”','Free','The single best essay on evals; interviewers who ask about evals are asking about this.','https://hamel.dev'],
+    ['Applied LLMs — “What we learned from a year of building with LLMs”','Free','Practitioner lessons on RAG, evals, agents, cost; mine it for trade-offs to name in designs.','https://applied-llms.org']]},
+  {slot:'Tue / Thu — fundamentals and designs',k:'job',items:[
+    ['Andrej Karpathy — “Intro to Large Language Models” and “Let’s build GPT” (YouTube)','Free','Tokens, context, sampling, why outputs drift. Watch once; then explain each fundamental aloud without notes.','https://www.youtube.com/@AndrejKarpathy'],
+    ['3Blue1Brown — transformers and attention (YouTube)','Free','The visual intuition for embeddings and attention; two videos.','https://www.youtube.com/@3blue1brown'],
+    ['Jay Alammar — The Illustrated Transformer','Free','The classic diagram walkthrough; read once.','https://jalammar.github.io/illustrated-transformer/'],
+    ['Lilian Weng — “LLM Powered Autonomous Agents”','Free','Agent design: planning, memory, tools, failure modes. The source for the tool-agent design.','https://lilianweng.github.io'],
+    ['Eugene Yan — applied-ml and LLM patterns','Free','Pattern catalogue for RAG, evals, guardrails, caching; one post per design week.','https://eugeneyan.com'],
+    ['Evidently AI — ML system design case studies (450+)','Free','Real company write-ups of RAG, serving, eval systems; read one before each design and borrow its trade-offs.','https://www.evidentlyai.com/ml-system-design'],
+    ['Chip Huyen — “AI Engineering” (book)','Low cost (₹600–1,200 paperback / ebook)','The one paid thing worth buying: evals, RAG, agents, serving, in the language interviewers use. Chapters 3–4 and 6–9 only.','https://huyenchip.com/books/'],
+    ['alexeygrigorev / ai-engineering-field-guide (GitHub)','Free','Disclosed interview loops and take-home patterns from real companies; the design question bank.','https://github.com/alexeygrigorev/ai-engineering-field-guide']]},
+  {slot:'Tue / Thu — speaking and English',k:'job',items:[
+    ['Your phone’s voice recorder + the five-part shape','Free','The course is 52 recordings. Nothing beats it. Listen back once, tick three boxes.','#log/pitches'],
+    ['Pramp / interviewing.io (free peer mocks)','Free','Peer mock interviews from February; one every two weeks is enough. Book the slot a week ahead.','https://www.pramp.com'],
+    ['Toastmasters club (Delhi NCR)','Low cost (club dues, roughly ₹1,500–3,000 per half-year)','Only if you want a room of people; the weekly recordings already cover the skill. Optional, after January.','https://www.toastmasters.org/find-a-club'],
+    ['YouTube: watch two conference talks a month on RAG or evals, then summarise each aloud in 2 minutes','Free','Vocabulary for the technical screen comes from hearing engineers talk, not from grammar books.','https://www.youtube.com']]},
+  {slot:'Weekend — portfolio and applications',k:'job',items:[
+    ['GitHub README templates and Mermaid diagrams','Free','One architecture diagram per repo, drawn in Mermaid so it lives in the README.','https://mermaid.js.org'],
+    ['Excalidraw','Free','Whiteboard for the design skeleton; export PNG for the README.','https://excalidraw.com'],
+    ['Wellfound (startup jobs), Instahyre, Naukri, LinkedIn Jobs','Free','The four boards; career pages of the 40-company list come first.','https://wellfound.com'],
+    ['Levels.fyi and Glassdoor India salary pages','Free','Band checks before you name a range; use them to anchor the expected-CTC script.','https://www.levels.fyi']]},
+  {slot:'Body',k:'body',items:[
+    ['Stronger by Science — articles and research reviews','Free','Protein, rate of loss, training in a deficit: the evidence behind Sections 4.1–4.4, written for lifters.','https://www.strongerbyscience.com'],
+    ['Renaissance Periodization / Jeff Nippard (YouTube)','Free','Technique for the big lifts and PPL programming. Watch one video per lift, once.','https://www.youtube.com/@RenaissancePeriodization'],
+    ['IFCT 2017 — Indian Food Composition Tables (NIN-ICMR)','Free (PDF)','Protein values for dal, paneer, curd and eggs as actually eaten in India; the source for the portion table.','https://www.nin.res.in'],
+    ['Examine.com (free summaries)','Free tier','Creatine and protein evidence summaries if you want to check a claim.','https://examine.com']]},
+  {slot:'Money (after the offer)',k:'money',items:[
+    ['Zerodha Varsity — Personal Finance module','Free','Emergency funds, liquid funds, SIPs, step-up, insurance, in Indian terms. The whole money section in one free module.','https://zerodha.com/varsity/'],
+    ['freefincal','Free','Independent, calculator-heavy Indian personal finance; no product pushing.','https://freefincal.com']]}
+];
+function vResources(){
+  return `<div class="top"><div><h1>Resources</h1><p class="muted">Free first. Each one is tied to a slot so you never choose what to study. Rule: one resource per build artefact, one talk per design — collecting resources is not a slot.</p></div></div>`+
+  RESOURCES.map((r,i)=>acc(r.slot,`<div class="tw"><table><tr><th>Resource</th><th>Cost</th><th>Use it for</th></tr>${r.items.map(it=>`<tr><td><a href="${esc(it[3])}" ${it[3].startsWith('#')?'':'target="_blank" rel="noopener"'}>${esc(it[0])}</a></td><td class="sm">${esc(it[1])}</td><td class="sm">${esc(it[2])}</td></tr>`).join('')}</table></div>`,i<2)).join('')+
+  `<div class="card" style="margin-top:12px">${rule('you find a new course, book or playlist,','write it here in Backup notes and keep using the one you are on. Switching resources is the most common way a 150-hour budget disappears.')}</div>`;
+}
+
+/* ============================ WIRING ============================ */
+function wire(m){
+  m.querySelectorAll('[data-chk] .tap').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.closest('[data-chk]').dataset.chk; const [type,key]=[id.slice(0,2),id.slice(2)];
+    if(type==='d:'){const r=dayRec(today()); r[key]=!r[key];}
+    else if(type==='c:'){S.checkpoints[key]=!S.checkpoints[key];}
+    else if(type==='p:'){const p=S.problems[key]||{}; if(p.date){delete S.problems[key];} else {S.problems[key]={date:iso(today())}; wk(today()).problems++; toast('Logged — re-solve due in a week');} }
+    save(); route();
+  }));
+  m.querySelectorAll('[data-resolve]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.resolve; if(S.problems[k]){S.problems[k].resolved=iso(today()); save(); toast('Re-solve logged'); route();}}));
+  m.querySelectorAll('[data-inc]').forEach(b=>b.addEventListener('click',()=>{const w=wk(today()); const k=b.dataset.inc; w[k]++; if(k==='pitches') S.pitches.push({date:iso(today()),subject:'Quick add',len:3,checks:0}); if(k==='apps') S.apps.push({date:iso(today()),company:'Quick add',role:'',channel:'Other',stage:'Applied',contact:'',next:''}); save(); toast('+1'); route();}));
+  m.querySelectorAll('[data-pass]').forEach(b=>b.addEventListener('click',()=>{const p=passes(today()); const k=b.dataset.pass; if(p[k]>=2){toast('No passes left this month');return;} p[k]++; save(); toast('Pass used'); route();}));
+  m.querySelectorAll('[data-sub]').forEach(b=>b.addEventListener('click',()=>{location.hash='#log/'+b.dataset.sub;}));
+  m.querySelectorAll('[data-cf]').forEach(b=>b.addEventListener('click',()=>{location.hash='#checks/'+b.dataset.cf;}));
+  m.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>copyText(SCRIPTS[+b.dataset.copy].t)));
+  m.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.theme; if(v==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',v); try{localStorage.setItem(KEY+'-theme',v);}catch(e){} }));
+  const rq=m.querySelector('#rq'); if(rq) rq.addEventListener('input',()=>{m.querySelector('#rlist').innerHTML=protocolsHTML(rq.value);});
+  const ciSave=m.querySelector('#ciSave'); if(ciSave) ciSave.addEventListener('click',()=>{
+    const w=parseFloat(m.querySelector('#ciW').value); if(!(w>30&&w<200)){toast('Enter the scale reading');m.querySelector('#ciW').focus();return;}
+    const rec={date:m.querySelector('#ciD').value||iso(today()),weight:+w.toFixed(1),sleep:+m.querySelector('#ciS').value||0,problems:+m.querySelector('#ciP').value||0,pitches:+m.querySelector('#ciR').value||0,apps:+m.querySelector('#ciA').value||0,note:m.querySelector('#ciN').value.trim()};
+    const i=S.checkins.findIndex(c=>c.date===rec.date); if(i>=0) S.checkins[i]=rec; else S.checkins.push(rec); S.checkins.sort((a,b)=>a.date<b.date?-1:1);
+    const wrec=wk(parse(rec.date)); wrec.problems=rec.problems; wrec.pitches=rec.pitches; wrec.apps=rec.apps;
+    save(); toast('Check-in saved'); route();
+  });
+  const ciCopy=m.querySelector('#ciCopy'); if(ciCopy) ciCopy.addEventListener('click',()=>{const t=`problems: ${m.querySelector('#ciP').value||0} · pitches: ${m.querySelector('#ciR').value||0} · applications: ${m.querySelector('#ciA').value||0} · scale: ${m.querySelector('#ciW').value||'—'}`+(m.querySelector('#ciN').value.trim()?`\n${m.querySelector('#ciN').value.trim()}`:''); copyText(t);});
+  m.querySelectorAll('[data-delci]').forEach(b=>b.addEventListener('click',()=>{S.checkins.splice(+b.dataset.delci,1); save(); route();}));
+  const pSave=m.querySelector('#pSave'); if(pSave) pSave.addEventListener('click',()=>{const checks=m.querySelectorAll('.pc:checked').length; const d=m.querySelector('#pD').value||iso(today()); S.pitches.push({date:d,subject:m.querySelector('#pS').value,len:+m.querySelector('#pL').value||3,checks}); wk(parse(d)).pitches++; save(); toast('Pitch logged'); route();});
+  const aSave=m.querySelector('#aSave'); if(aSave) aSave.addEventListener('click',()=>{const c=m.querySelector('#aC').value.trim(); if(!c){toast('Company is required');return;} const d=m.querySelector('#aD').value||iso(today()); S.apps.push({date:d,company:c,role:m.querySelector('#aR').value.trim(),channel:m.querySelector('#aCh').value,stage:'Applied',contact:m.querySelector('#aCt').value.trim(),next:m.querySelector('#aN').value.trim()}); wk(parse(d)).apps++; save(); toast('Added'); route();});
+  m.querySelectorAll('[data-stage]').forEach(s=>s.addEventListener('change',()=>{S.apps[+s.dataset.stage].stage=s.value; save(); route();}));
+  m.querySelectorAll('[data-delapp]').forEach(b=>b.addEventListener('click',()=>{S.apps.splice(+b.dataset.delapp,1); save(); route();}));
+  const lSave=m.querySelector('#lSave'); if(lSave) lSave.addEventListener('click',()=>{const w=+m.querySelector('#lW').value, r=+m.querySelector('#lR').value; if(!(w>0&&r>0)){toast('Weight and reps');return;} S.lifts.push({date:iso(today()),lift:m.querySelector('#lL').value,w,r}); save(); toast('Logged'); route();});
+  const sSave=m.querySelector('#sSave'); if(sSave) sSave.addEventListener('click',()=>{S.setup={slotWeekdayTime:m.querySelector('#sWT').value,slotWeekdayPlace:m.querySelector('#sWP').value.trim(),slotTueThuTime:m.querySelector('#sTT').value,slotWeekendDay:m.querySelector('#sWD').value,slotWeekendTime:m.querySelector('#sWTm').value,audio:m.querySelector('#sAu').value.trim(),noticePeriod:m.querySelector('#sNP').value.trim(),freeMeal:m.querySelector('#sFM').value.trim()}; save(); toast('Saved'); });
+  const bkCopy=m.querySelector('#bkCopy'); if(bkCopy) bkCopy.addEventListener('click',()=>copyText(m.querySelector('#bk').value));
+  const bkRestore=m.querySelector('#bkRestore'); if(bkRestore) bkRestore.addEventListener('click',()=>{try{const o=JSON.parse(m.querySelector('#bk').value); if(!o||typeof o!=='object') throw 0; S=Object.assign({},DEFAULTS,o); save(); toast('Restored'); route();}catch(e){toast('That box does not contain a valid backup');}});
+  const bkReset=m.querySelector('#bkReset'); if(bkReset) bkReset.addEventListener('click',()=>{if(confirm('Delete everything saved in this browser?')){S=JSON.parse(JSON.stringify(DEFAULTS)); save(); route();}});
+}
+function copyText(t){ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast('Copied'),()=>fallbackCopy(t));} else fallbackCopy(t); }
+function fallbackCopy(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); toast('Copied');}catch(e){toast('Select and copy manually');} document.body.removeChild(ta); }
+
+/* ============================ BOOT ============================ */
+load();
+try{const th=localStorage.getItem(KEY+'-theme'); if(th&&th!=='auto') document.documentElement.setAttribute('data-theme',th);}catch(e){}
+route();
+</script>
+</body>
+</html>
