@@ -392,7 +392,7 @@ const SAT={
 /* Dated one-offs (milestones, money, special tasks) */
 const DATED=[
  ['2026-11-17','milestone','Set up the planner: open Settings, turn on sync, and do the Phase 1 WOOP (5 min)','Settings → Sync explains the token. WOOP: write your Wish, the best Outcome, the one real Obstacle, and an if-then Plan for it. Keep it in the check-in note on Sunday.',10],
- ['2026-11-18','health','Buy for the week: 1 dozen eggs, 500 g soya chunks, roasted chana','Keep soya chunks in your room; soak in hot water for 10 min and add salt and lemon.',0],
+ ['2026-11-18','health','Buy for the week: 28 eggs (4 a day), 500 g soya chunks, dahi, roasted chana','Keep eggs and soya in your room so protein doesn’t depend on the mess. Soak soya in hot water for 10 min; add to dal or sabzi, or eat with salt and lemon.',0],
  ['2026-11-24','career','Find your notice period in your AIONOS appointment letter or HR portal; enter it in Settings','This is about your CURRENT job: how many days you must keep working after you resign. You don’t need any offer to find it. It decides how early in spring you need an offer.',10],
  ['2026-11-30','money','Write your monthly essential expenses as one number (mess/rent, travel, phone, family support)','Needed for the layoff buffer target. Rough is fine.',10],
  ['2026-12-01','money','Layoff buffer: label a separate savings pocket and set a monthly auto-transfer you can sustain until it holds one month of expenses','Job-security step. Amount is your choice; small and automatic beats large and skipped. Not financial advice.',10],
@@ -481,13 +481,13 @@ function gen(){
     // SUNDAY
     if(wd===0){
       add('health','Weigh-in before breakfast, then the Sunday check-in (Log)',{min:5,how:'After the toilet, before food, same scale and clothes. Then open Log → Check-in, enter weight and short nights, Save, read the verdict, and send the copied summary to your coach chat.'});
-      add('review','Weekly review: clear past-due tasks (do or skip), read next week, pick this week’s free meal',{min:15,how:'Dashboard → Past due: tick what you did, Skip what you won’t do. Then Week → next week. Then Settings → free meal.'});
+      add('review','Weekly review: clear past-due tasks (do or skip), read next week, pick this week’s free meal',{min:15,how:'Dashboard → Past due: tick what you did, Skip what you won’t do. Then Week → next week. Then Settings → free meal. Restock: 28 eggs and soya chunks for the week.'});
       if(d.getDate()<=7) add('career','Résumé refresh (10 min): add last month’s wins from WINS.md',{min:10,how:'If a layoff comes, you’re ready to apply the same day.'});
       if(addDays(s,7).slice(5,7)!==s.slice(5,7)) add('health','Monthly lift check: compare top sets with last month (Log → Lifts)',{min:5,how:'Same or higher = muscle kept. Lower two months running = add protein, check sleep, don’t cut more carbs.'});
     }
     // HEALTH daily
     if(wd>=1&&wd<=6){ const g=GYM[wd]; add('health',`Gym: ${g}${g==='Push'?' + 20-min incline walk':''}`,{how:'Double progression on the main lifts: same weight until every set reaches 10 reps, then add the smallest plate. Log the heaviest set in Log → Lifts once a week.'+(g==='Push'?' Walk: incline 8–12%, talking pace, treadmill-only audio.':'')}); }
-    add('health','Protein on every plate (130 g; 150 g on gym days)',{how:'Eggs at breakfast; paneer/soya/dal at lunch and dinner; dahi or VegPro in between. No protein by 14:00 → eat eggs now. Library → Body has the portion table.'});
+    add('health','Protein: 110 g minimum, 120 g goal (eggs + soya carry it)',{how:'4 eggs at breakfast (~26 g) · 1 scoop VegPro after gym (~20–24 g) · 50 g dry soya chunks soaked into dal or sabzi (~25 g) · 3 katori dal over lunch and dinner (~21–27 g) · 200 g dahi (~8 g) · 1 glass milk (~8 g) · roti/rice (~6–8 g) ≈ 115–125 g. Paneer is a bonus, not required. No protein by 14:00 → eat the eggs now. A rest day without the scoop (~95–100 g) is fine.'});
     add('health','Carb rule: roti/rice at two meals only, half portion',{how:'Third meal = protein + vegetables. No sugary drinks or packaged snacks. Fruit is fine. Your weekly free meal doesn’t break this.'});
     add('health','In bed by 23:30 (phone away at 23:15)',{how:'Seven hours is the floor. Short sleep in a diet means more muscle lost and less fat lost.'});
     BYDATE[s]=T; T.forEach(t=>ALL.push(t));
@@ -498,7 +498,7 @@ function gen(){
 /* =================== STORE + SYNC =================== */
 const KEY='route-planner-v2', SKEY='route-planner-sync';
 const DEF=()=>({v:2,status:{},checkins:[],lifts:[],apps:[],setup:{noticeDays:'',audio:'',freeMeal:'',u:0}});
-let S=DEF(), SYNC={token:'',gistId:'',last:0,state:'off',msg:''};
+let S=DEF(), SYNC={token:'',gistId:'',pass:'',rekey:false,last:0,state:'off',msg:''};
 function load(){try{const r=localStorage.getItem(KEY);if(r){S=Object.assign(DEF(),JSON.parse(r));}}catch(e){} try{const r=localStorage.getItem(SKEY);if(r)SYNC=Object.assign(SYNC,JSON.parse(r));}catch(e){}
   try{ if(!localStorage.getItem(KEY)){const old=JSON.parse(localStorage.getItem('route-console-v1')||'null'); if(old){const now=Date.now();
     (old.checkins||[]).forEach(c=>S.checkins.push({id:'m'+c.date,date:c.date,weight:c.weight,sleep:c.sleep||0,note:c.note||'',u:now}));
@@ -524,19 +524,47 @@ async function gh(path,opt={}){
   if(r.status===401) throw new Error('Token rejected — check it has the gist permission and hasn’t expired.');
   if(r.status===404) throw new Error('Gist not found (404).');
   if(!r.ok) throw new Error('GitHub error '+r.status);
-  return r.json();
+  return r.status===204?null:r.json();
+}
+/* ---- end-to-end lock: AES-GCM with a key derived from your passphrase (PBKDF2, 200k rounds) ---- */
+const _te=new TextEncoder(), _td=new TextDecoder();
+const b64=buf=>{let s='';const b=new Uint8Array(buf);for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));return btoa(s);};
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pass,salt){const k=await crypto.subtle.importKey('raw',_te.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function seal(obj){
+  if(!SYNC.pass) return JSON.stringify(obj);
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await deriveKey(SYNC.pass,salt),_te.encode(JSON.stringify(obj)));
+  return JSON.stringify({enc:1,app:'route-planner',salt:b64(salt),iv:b64(iv),data:b64(ct)});
+}
+async function unseal(txt){
+  let o; try{o=JSON.parse(txt);}catch(e){return null;}
+  if(!o||!o.enc) return o;
+  if(!SYNC.pass) throw new Error('Your sync data is locked. Enter the same passphrase you set on your other device.');
+  try{const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(o.iv)},await deriveKey(SYNC.pass,unb64(o.salt)),unb64(o.data));return JSON.parse(_td.decode(pt));}
+  catch(e){throw new Error('Wrong passphrase — the synced data couldn’t be unlocked. Nothing was overwritten.');}
+}
+async function ensureGist(){
+  if(SYNC.gistId) return;
+  const list=await gh('/gists?per_page=100'); const g=list.find(x=>x.description===GDESC);
+  if(g) SYNC.gistId=g.id; else { const c=await gh('/gists',{method:'POST',body:JSON.stringify({description:GDESC,public:false,files:{[GFILE]:{content:await seal(S)}}})}); SYNC.gistId=c.id; SYNC.rekey=false; }
 }
 let syncing=false;
 async function syncNow(quiet){
   if(!SYNC.token||syncing) return; syncing=true; setSyncState('busy','Syncing…');
   try{
-    if(!SYNC.gistId){
-      const list=await gh('/gists?per_page=100'); const g=list.find(x=>x.description===GDESC);
-      if(g) SYNC.gistId=g.id; else { const c=await gh('/gists',{method:'POST',body:JSON.stringify({description:GDESC,public:false,files:{[GFILE]:{content:JSON.stringify(S)}}})}); SYNC.gistId=c.id; }
+    await ensureGist();
+    let g; try{ g=await gh('/gists/'+SYNC.gistId); }catch(e){ if(/404/.test(e.message)){ SYNC.gistId=''; await ensureGist(); g=await gh('/gists/'+SYNC.gistId);} else throw e; }
+    const f=g.files&&g.files[GFILE];
+    if(f){ let txt=f.content; if(f.truncated){txt=await (await fetch(f.raw_url,{cache:'no-store'})).text();} const R=await unseal(txt); if(merge(R)){save(true); rerender();} }
+    if(SYNC.rekey&&SYNC.pass){
+      /* replace the old gist so its unlocked revision history is gone */
+      try{ await gh('/gists/'+SYNC.gistId,{method:'DELETE'}); }catch(e){}
+      const c=await gh('/gists',{method:'POST',body:JSON.stringify({description:GDESC,public:false,files:{[GFILE]:{content:await seal(S)}}})});
+      SYNC.gistId=c.id; SYNC.rekey=false; saveSync();
+    } else {
+      await gh('/gists/'+SYNC.gistId,{method:'PATCH',body:JSON.stringify({files:{[GFILE]:{content:await seal(S)}}})});
     }
-    const g=await gh('/gists/'+SYNC.gistId); const f=g.files&&g.files[GFILE];
-    if(f){ let txt=f.content; if(f.truncated){txt=await (await fetch(f.raw_url,{cache:'no-store'})).text();} let R=null; try{R=JSON.parse(txt);}catch(e){} if(merge(R)){save(true); rerender();} }
-    await gh('/gists/'+SYNC.gistId,{method:'PATCH',body:JSON.stringify({files:{[GFILE]:{content:JSON.stringify(S)}}})});
     SYNC.last=Date.now(); saveSync(); setSyncState('ok','Synced '+_timeFmt.format(new Date()));
     if(!quiet) toast('Synced');
   }catch(e){
@@ -860,7 +888,7 @@ const SCRIPTS=[
   {lab:'Deferring the number before technical rounds',t:'I’d like to understand the role first; I’m confident we’ll align on compensation if there’s a fit.'}
 ];
 
-const PROTEIN=[['Whole eggs','4 eggs','~26 g','Boil a dozen on Sunday'],['Paneer','150 g','~28 g','~19 g per 100 g'],['Soya chunks (dry)','50 g (≈1 katori cooked)','~25 g','Cheapest protein per rupee; keep 500 g in the room'],['Dal','2 katori','~16 g','7–9 g per katori'],['Dahi / curd','200 g','~8 g','Greek-style doubles it'],['Milk','1 glass','~8 g','—'],['VegPro','1 full scoop','check label (~20–25 g)','Full scoop from 1 Dec if gas stays minor'],['Peanuts / roasted chana','30 g','~7 g','Only allowed snack']];
+const PROTEIN=[['Whole eggs','4 eggs','~26 g','Daily anchor. Buy 28 a week; boil in batches'],['VegPro','1 scoop after gym','~20–24 g (check label)','Full scoop if gas stays minor'],['Soya chunks (dry)','50 g (≈1 katori cooked)','~25 g','Daily anchor. Cheapest protein per rupee; keep 500 g in the room'],['Dal','3 katori over the day','~21–27 g','7–9 g per katori'],['Paneer','100 g','~19 g','Bonus when the mess serves it — not required'],['Dahi / curd','200 g','~8 g','Greek-style doubles it'],['Milk','1 glass','~8 g','—'],['VegPro','1 full scoop','check label (~20–25 g)','Full scoop from 1 Dec if gas stays minor'],['Peanuts / roasted chana','30 g','~7 g','Only allowed snack']];
 
 const SOURCES=[
   ['Behaviour','Gollwitzer & Sheeran (2006), implementation intentions meta-analysis, 94 tests, d ≈ 0.65; Sheeran, Listrom & Gollwitzer (2024), 642 tests. · Lally et al. (2010), habit formation median 66 days, one miss immaterial; 2024 meta-analysis of 20 studies. · Milkman et al. (2014) temptation bundling ~55% more gym visits; Dai, Milkman & Riis, fresh-start effect; Sharif, what-the-hell effect. · Oettingen & Mayer (2002) positive fantasies; Wang et al. (2021) MCII meta-analysis. · Rowland (2014), Adesope et al. (2017) testing effect; Latimier et al. (2021) spacing; Brunmair & Richter (2019) interleaving.'],
@@ -891,8 +919,8 @@ function vLibrary(){
    <h4 style="margin-top:12px">The six designs</h4><div class="tw"><table><tr><th>When</th><th>Design</th><th>Trade-offs they listen for</th></tr>${DESIGNS.map(d=>`<tr><td>${d[0]}</td><td><b>${esc(d[1])}</b></td><td class="sm">${esc(d[2])}</td></tr>`).join('')}</table></div>
    <h4 style="margin-top:12px">Fundamentals (two sentences each)</h4><ol>${FUNDAMENTALS.map(f=>`<li>${esc(f)}</li>`).join('')}</ol>
    <h4 style="margin-top:12px">Five stories</h4><ol>${STORIES.map(s=>`<li><b>${s[0]}</b> — ${esc(s[1])}</li>`).join('')}</ol>`)}
-  ${acc('Body — protein table and adjustment rules',`<p>Target 130 g protein a day, 150 g on gym days. Lose about 0.3 kg a week: slow enough to keep muscle.</p><div class="tw"><table><tr><th>Food</th><th>Portion</th><th>Protein</th><th>Note</th></tr>${PROTEIN.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td><b>${p[2]}</b></td><td class="sm">${p[3]}</td></tr>`).join('')}</table></div>
-   ${rule('the scale is flat two Sundays running,','check sleep first; if sleep was fine, remove one roti or half the rice from one carb meal.')}${rule('you lose more than 0.7 kg in a week,','add the carb back.')}${rule('a big lift drops two sessions running,','add protein that day and check sleep. Don’t cut more food.')}`)}
+  ${acc('Body — protein table and adjustment rules',`<p><b>Target: 110 g minimum, 120 g goal</b> (about 1.5–1.6 g per kg). At a slow 0.3 kg/week loss you don’t need more, and 150 g would need so much paneer it would eat your calorie deficit. Eggs and soya carry the day; paneer is a bonus.</p><h4 style="margin-top:10px">A day that hits it without paneer</h4><div class="tw"><table><tr><th>When</th><th>What</th><th>Protein</th></tr><tr><td>Breakfast</td><td>4 eggs + 1 glass milk</td><td>~34 g</td></tr><tr><td>Lunch (mess)</td><td>2 katori dal + 1 roti + sabzi with 25 g dry soya added</td><td>~30 g</td></tr><tr><td>After gym</td><td>1 scoop VegPro</td><td>~20–24 g</td></tr><tr><td>Evening</td><td>200 g dahi</td><td>~8 g</td></tr><tr><td>Dinner (mess)</td><td>1 katori dal + half rice + 25 g dry soya in sabzi</td><td>~22 g</td></tr><tr><td><b>Total</b></td><td></td><td><b>~115–120 g</b></td></tr></table></div><h4 style="margin-top:10px">Portion table</h4><div class="tw"><table><tr><th>Food</th><th>Portion</th><th>Protein</th><th>Note</th></tr>${PROTEIN.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td><b>${p[2]}</b></td><td class="sm">${p[3]}</td></tr>`).join('')}</table></div>
+   ${rule('the scale is flat two Sundays running,','check sleep first; if sleep was fine, remove one roti or half the rice from one carb meal.')}${rule('you lose more than 0.7 kg in a week,','add the carb back.')}${rule('a big lift drops two sessions running,','add two eggs a day and check sleep. Don’t cut more food.')}${rule('you can’t hit 110 g for three days in a row,','the bottleneck is supply, not effort: buy eggs and soya for the room so protein doesn’t depend on the mess.')}`)}
   ${acc('Money — the order of operations',`<ol><li><b>Now:</b> SIP stays as is. Starter layoff buffer: a small automatic transfer until it holds one month of expenses.</li><li><b>First new salary:</b> emergency fund to 3 months of expenses (liquid fund or sweep FD).</li><li><b>Save the raise:</b> at least half the increase goes to savings before lifestyle absorbs it.</li><li><b>Then:</b> step up the SIP each year; check health insurance; term insurance only if someone depends on you.</li></ol><p class="xs faint">Standard personal-finance sequencing, not individual financial advice.</p>`)}
   ${acc('Resources — free first, tied to a track',RESOURCES.map(r=>`<h4 style="margin-top:12px">${esc(r.slot)}</h4><div class="tw"><table><tr><th>Resource</th><th>Cost</th><th>Use it for</th></tr>${r.items.filter(it=>!it[3].startsWith('#')).map(it=>`<tr><td><a href="${esc(it[3])}" target="_blank" rel="noopener">${esc(it[0])}</a></td><td class="sm">${esc(it[1])}</td><td class="sm">${esc(it[2])}</td></tr>`).join('')}</table></div>`).join(''))}
   ${acc('Sources',SOURCES.map(s=>`<p><b>${esc(s[0])}.</b> <span class="sm">${esc(s[1])}</span></p>`).join('')+'<p><b>AI wave.</b> <span class="sm">Brynjolfsson, Chandar & Chen (Nov 2025), “Canaries in the Coal Mine?”, Stanford Digital Economy Lab. · Becker et al. (2025), METR, “Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity” (arXiv 2507.09089). · FY26 Indian IT headcount: Business Standard and AIM reporting; Infosys AI pay band: CareerCracker summary.</span></p>')}`;
@@ -914,8 +942,10 @@ function vSettings(){
   return `<div class="top"><div><h1>Settings</h1></div></div>
   <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h3>Sync between phone and laptop</h3><span id="syncState">${syncStateHTML()}</span></div>
    <p class="sm muted" style="margin-top:6px">Your data is saved in a private GitHub Gist that only your token can open. Paste the same token on both devices; the app saves and loads automatically.</p>
-   <details style="margin-top:10px"><summary class="sm" style="cursor:pointer;color:var(--accent);font-weight:600">How to make the token (2 minutes, once)</summary><ol class="steps sm"><li>On GitHub: your photo → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b>.</li><li>Note: “Route planner sync”. Expiration: <b>90 days</b> or a custom date after 31 May 2027.</li><li>Tick <b>only</b> the <span class="kbd">gist</span> box. Nothing else. Generate, then copy the token (starts with <span class="kbd">ghp_</span>).</li><li>Paste it below on this device, tap <b>Save & sync</b>. Then do the same on your other device.</li></ol><p class="xs faint">The token can only read and write your gists, not your code. It stays on your devices; it is never put into the synced data. If you think it leaked, delete it on GitHub and make a new one.</p></details>
+   <details style="margin-top:10px"><summary class="sm" style="cursor:pointer;color:var(--accent);font-weight:600">How to make the token (2 minutes, once)</summary><ol class="steps sm"><li>On GitHub: your photo → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Tokens (classic)</b> → <b>Generate new token (classic)</b>.</li><li>Note: “Route planner sync”. Expiration: <b>90 days</b> or a custom date after 31 May 2027.</li><li>Tick <b>only</b> the <span class="kbd">gist</span> box. Nothing else. Generate, then copy the token (starts with <span class="kbd">ghp_</span>).</li><li>Paste it below on this device, tap <b>Save & sync</b>. Then do the same on your other device.</li></ol><p class="xs faint">The token can only read and write your gists, not your code. It stays on your devices and is never put into the synced data. Lost a phone? Delete the token on GitHub (same page) and make a new one; the lost phone can no longer sync.</p></details>
    ${fld('tok','GitHub token','A <b>classic</b> personal access token with only the <b>gist</b> permission. Starts with <b>ghp_</b>. See “How to make the token” above.',`<input id="tok" class="in" type="password" autocomplete="off" placeholder="ghp_…" value="${esc(SYNC.token)}">`)}
+   ${fld('pph','Lock passphrase (strongly recommended)','A phrase <b>you invent</b> and type on every device — not your GitHub password. With it, your data is encrypted on your phone before it leaves, so only your devices can read it. <b>Example: four random words like “mango-river-lamp-42”</b>. If you forget it, the synced copy can’t be opened (each device still keeps its own copy). Use the <b>same</b> phrase on both devices.',`<input id="pph" class="in" type="password" autocomplete="new-password" placeholder="e.g. four random words" value="${esc(SYNC.pass)}">`)}
+   <p class="xs faint" style="margin-top:6px">${SYNC.pass?'🔒 Locked: data is encrypted before upload.':'Not locked: anyone who gets the gist link could read your logs. Add a passphrase.'}</p>
    <div class="btnrow"><button class="btn primary" id="tokSave">${I.sync}Save & sync</button><button class="btn" id="syncBtn">Sync now</button>${SYNC.token?'<button class="btn" id="tokOff">Turn sync off</button>':''}</div>
    <p class="xs faint" style="margin-top:8px">Sync works on your GitHub Pages site. It can’t run inside the claude.ai preview, which blocks outside connections.</p></div>
   <div class="card"><h3>Personal</h3><div class="frow">
@@ -960,9 +990,13 @@ function wire(m){
   const ls=m.querySelector('#lSave'); if(ls) ls.onclick=()=>{const w=+m.querySelector('#lW').value,r=+m.querySelector('#lR').value;if(!(w>0&&r>0)){toast('Enter weight and reps');return;}
     S.lifts.push({id:uid(),date:m.querySelector('#lD').value||TODAY(),lift:m.querySelector('#lL').value,w,r,u:Date.now()});save();toast('Top set logged');rerender();};
   m.querySelectorAll('[data-dellift]').forEach(b=>b.onclick=()=>{const l=S.lifts.find(x=>x.id===b.dataset.dellift);if(l){l.del=true;l.u=Date.now();save();rerender();}});
-  const ts=m.querySelector('#tokSave'); if(ts) ts.onclick=()=>{const v=m.querySelector('#tok').value.trim();if(!v){toast('Paste the token first');return;} if(v!==SYNC.token){SYNC.gistId='';} SYNC.token=v;saveSync();setSyncState('idle','Ready');syncNow(false).then(()=>rerender());};
+  const ts=m.querySelector('#tokSave'); if(ts) ts.onclick=()=>{const v=m.querySelector('#tok').value.trim();if(!v){toast('Paste the token first');return;}
+    const pp=m.querySelector('#pph').value; if(pp&&pp.length<8){toast('Passphrase: at least 8 characters');return;}
+    if(v!==SYNC.token){SYNC.gistId='';}
+    if(pp&&pp!==SYNC.pass){ SYNC.rekey=!!SYNC.gistId||!!SYNC.token; }
+    SYNC.token=v; SYNC.pass=pp; saveSync(); setSyncState('idle','Ready'); syncNow(false).then(()=>rerender());};
   const sb=m.querySelector('#syncBtn'); if(sb) sb.onclick=()=>{if(!SYNC.token){toast('Add a token first');return;} syncNow(false);};
-  const to=m.querySelector('#tokOff'); if(to) to.onclick=()=>{if(!confirm('Turn sync off on this device? Your data stays here and in the gist.'))return;SYNC.token='';SYNC.gistId='';saveSync();setSyncState('off','');rerender();};
+  const to=m.querySelector('#tokOff'); if(to) to.onclick=()=>{if(!confirm('Turn sync off on this device? This removes the token and passphrase from this device. Your data stays here and in the gist.'))return;SYNC.token='';SYNC.gistId='';SYNC.pass='';SYNC.rekey=false;saveSync();setSyncState('off','');rerender();};
   const ss=m.querySelector('#setSave'); if(ss) ss.onclick=()=>{S.setup={noticeDays:m.querySelector('#np').value.trim(),freeMeal:m.querySelector('#fm').value.trim(),audio:m.querySelector('#au').value.trim(),u:Date.now()};save();toast('Saved');rerender();};
   m.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>{const v=b.dataset.theme;if(v==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',v);try{localStorage.setItem(KEY+'-theme',v);}catch(e){}});
   const bc=m.querySelector('#bkCopy'); if(bc) bc.onclick=()=>copyText(JSON.stringify(S));
